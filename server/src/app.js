@@ -8,15 +8,17 @@ const {
   preventParameterPollution,
   xssClean,
   securityHeaders,
-  apiLimiter
+  apiLimiter,
+  checkMaintenanceMode
 } = require('./middleware');
 const {
   authRoutes,
+  userRoutes,
   escrowRoutes,
   paymentRoutes,
-  userRoutes,
   messageRoutes,
-  adminRoutes
+  adminRoutes,
+  notificationRoutes
 } = require('./routes');
 const logger = require('./utils/logger');
 
@@ -30,7 +32,7 @@ app.use(securityHeaders);
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
@@ -49,6 +51,7 @@ app.use(passport.initialize());
 app.use('/uploads', express.static('uploads'));
 
 app.use('/api', apiLimiter);
+app.use(checkMaintenanceMode);
 
 app.get('/api/csrf-token', (req, res) => {
   res.json({ csrfToken: 'csrf-token-placeholder' });
@@ -60,6 +63,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
