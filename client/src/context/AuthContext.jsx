@@ -8,6 +8,7 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [mfaRequired, setMfaRequired] = useState(false);
     const [pendingCredentials, setPendingCredentials] = useState(null);
+    const [show2FASetupModal, setShow2FASetupModal] = useState(false);
 
     const fetchUser = useCallback(async () => {
         try {
@@ -100,6 +101,7 @@ export const AuthProvider = ({ children }) => {
             clearAccessToken();
             setMfaRequired(false);
             setPendingCredentials(null);
+            setShow2FASetupModal(false);
         }
     };
 
@@ -127,6 +129,13 @@ export const AuthProvider = ({ children }) => {
         const response = await api.post('/auth/change-password', { currentPassword, newPassword });
         clearAccessToken();
         setUser(null);
+        return response.data;
+    };
+
+    const deleteAccount = async () => {
+        const response = await api.delete('/auth/account');
+        setUser(null);
+        clearAccessToken();
         return response.data;
     };
 
@@ -205,6 +214,7 @@ export const AuthProvider = ({ children }) => {
             forgotPassword,
             resetPassword,
             changePassword,
+            deleteAccount,
             verifyEmail,
             resendVerification,
             setupMFA,
@@ -216,7 +226,9 @@ export const AuthProvider = ({ children }) => {
             revokeSession,
             updateUser,
             fetchUser,
-            refreshUser: fetchUser
+            refreshUser: fetchUser,
+            show2FASetupModal,
+            setShow2FASetupModal
         }}>
             {!loading && children}
         </AuthContext.Provider>
