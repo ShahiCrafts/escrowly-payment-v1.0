@@ -281,6 +281,20 @@ const revokeSession = async (req, res) => {
   }
 };
 
+const deleteAccount = async (req, res) => {
+  try {
+    const result = await authService.deleteAccount(
+      req.user._id,
+      req.ip,
+      req.get('user-agent')
+    );
+    res.clearCookie('refreshToken');
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
 const googleCallback = async (req, res) => {
   try {
     const user = req.user;
@@ -319,5 +333,6 @@ module.exports = {
   getBackupCodes,
   getSessions,
   revokeSession,
+  deleteAccount,
   googleCallback
 };

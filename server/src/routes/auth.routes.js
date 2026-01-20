@@ -15,6 +15,7 @@ router.post('/logout', authController.logout);
 router.post('/logout-all', authenticate, authController.logoutAll);
 
 router.get('/me', authenticate, authController.getMe);
+router.delete('/account', authenticate, authController.deleteAccount);
 
 router.post('/verify-email', authController.verifyEmail);
 
