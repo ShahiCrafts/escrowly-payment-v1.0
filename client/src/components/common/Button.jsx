@@ -3,7 +3,7 @@ import { cn } from '../../utils/cn';
 
 const buttonVariants = {
     variant: {
-        primary: 'bg-blue-500 text-white hover:bg-blue-600 focus:ring-blue-500 shadow-sm',
+        primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
         secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:ring-blue-500',
         danger: 'bg-rose-500 text-white hover:bg-rose-600 focus:ring-rose-500',
         success: 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500',

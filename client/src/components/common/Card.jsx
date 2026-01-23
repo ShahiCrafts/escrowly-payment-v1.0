@@ -4,7 +4,7 @@ const Card = ({ className, children, ...props }) => {
     return (
         <div
             className={cn(
-                'bg-white rounded-2xl border border-slate-200/60',
+                'bg-white border rounded-2xl border-slate-200 overflow-hidden',
                 className
             )}
             {...props}
@@ -17,7 +17,7 @@ const Card = ({ className, children, ...props }) => {
 const CardHeader = ({ className, children, ...props }) => {
     return (
         <div
-            className={cn('px-5 py-4 border-b border-slate-100', className)}
+            className={cn('px-6 py-4 border-b border-slate-100', className)}
             {...props}
         >
             {children}
@@ -28,7 +28,7 @@ const CardHeader = ({ className, children, ...props }) => {
 const CardTitle = ({ className, children, ...props }) => {
     return (
         <h3
-            className={cn('text-sm font-semibold text-slate-900', className)}
+            className={cn('text-lg font-semibold text-slate-900', className)}
             {...props}
         >
             {children}
@@ -49,7 +49,7 @@ const CardDescription = ({ className, children, ...props }) => {
 
 const CardContent = ({ className, children, ...props }) => {
     return (
-        <div className={cn('px-5 py-4', className)} {...props}>
+        <div className={cn('px-6 py-4', className)} {...props}>
             {children}
         </div>
     );
@@ -59,7 +59,7 @@ const CardFooter = ({ className, children, ...props }) => {
     return (
         <div
             className={cn(
-                'px-5 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl',
+                'px-6 py-4 border-t border-slate-100 bg-slate-50/50 rounded-b-2xl',
                 className
             )}
             {...props}
