@@ -22,6 +22,29 @@ const ProtectedRoute = ({ allowedRoles = [] }) => {
         return <Navigate to="/auth/verify-email" replace />;
     }
 
+    if (user.isSuspended) {
+        console.log('ProtectedRoute: User suspended, redirecting');
+        return <Navigate to="/suspended" replace />;
+    }
+
+    // Role-based access control
+    if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+        console.log('ProtectedRoute: Unauthorized role', { userRole: user.role, allowedRoles });
+        // Redirect based on role if unauthorized
+        if (user.role === 'admin') {
+            return <Navigate to="/admin" replace />;
+        }
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    // Direct redirection for correct starting point
+    if (location.pathname === '/dashboard' && user.role === 'admin') {
+        return <Navigate to="/admin" replace />;
+    }
+    if (location.pathname === '/admin' && user.role === 'user') {
+        return <Navigate to="/dashboard" replace />;
+    }
+
     return <Outlet />;
 };
 
