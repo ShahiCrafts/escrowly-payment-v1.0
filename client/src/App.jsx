@@ -26,8 +26,8 @@ import TransactionDetail from './pages/dashboard/TransactionDetail';
 import Notifications from './pages/dashboard/Notifications';
 import Settings from './pages/dashboard/Settings';
 import HelpPage from './pages/dashboard/HelpPage';
-
 import MyEscrows from './pages/dashboard/MyEscrows';
+import KYCSubmission from './pages/dashboard/KYCSubmission';
 
 import AdminDashboard from './pages/admin/AdminDashboard';
 import Appeals from './pages/admin/Appeals';
@@ -107,6 +107,7 @@ const AppContent = () => {
               <Route path="/dashboard/create" element={<CreateTransaction />} />
               <Route path="/dashboard/transaction/:id" element={<TransactionDetail />} />
               <Route path="/dashboard/help" element={<HelpPage />} />
+              <Route path="/dashboard/kyc" element={<KYCSubmission />} />
             </Route>
           </Route>
 
@@ -118,6 +119,7 @@ const AppContent = () => {
               <Route path="/admin/users" element={<AdminDashboard />} />
               <Route path="/admin/transactions" element={<AdminDashboard />} />
               <Route path="/admin/disputes" element={<AdminDashboard />} />
+              <Route path="/admin/kyc" element={<AdminDashboard />} />
               <Route path="/admin/audit-logs" element={<AdminDashboard />} />
               <Route path="/admin/settings" element={<AdminDashboard />} />
             </Route>
