@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { Button } from './index';
+import ImageAvatar from './ImageAvatar';
 
 const AvatarUpload = ({ currentAvatar, onUpload, onRemove, firstName, lastName }) => {
     const [isUploading, setIsUploading] = useState(false);
@@ -22,26 +23,16 @@ const AvatarUpload = ({ currentAvatar, onUpload, onRemove, firstName, lastName }
         }
     };
 
-    const getInitials = () => {
-        return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
-    };
-
     return (
         <div className="flex items-center gap-6">
             <div className="relative">
-                <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-neutral-100 flex items-center justify-center">
-                    {currentAvatar ? (
-                        <img
-                            src={currentAvatar}
-                            alt="Profile"
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <span className="text-2xl font-bold text-neutral-400">
-                            {getInitials()}
-                        </span>
-                    )}
-                </div>
+                <ImageAvatar
+                    imageUrl={currentAvatar}
+                    firstName={firstName}
+                    lastName={lastName}
+                    size="xl"
+                    className="border-4 border-white"
+                />
                 {isUploading && (
                     <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
                         <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
