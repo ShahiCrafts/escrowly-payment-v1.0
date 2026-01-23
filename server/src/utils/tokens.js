@@ -24,12 +24,12 @@ const getSecrets = () => {
   return { accessSecret, refreshSecret };
 };
 
-const generateAccessToken = (userId) => {
+const generateAccessToken = (userId, expiresIn) => {
   const { accessSecret } = getSecrets();
   return jwt.sign(
     { userId },
     accessSecret,
-    { expiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '15m' }
+    { expiresIn: expiresIn ? `${expiresIn}m` : (process.env.JWT_ACCESS_EXPIRES_IN || '15m') }
   );
 };
 
