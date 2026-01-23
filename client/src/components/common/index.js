@@ -2,6 +2,7 @@ import Button from './Button';
 import Input from './Input';
 import Modal from './Modal';
 import AvatarUpload from './AvatarUpload';
+import ImageAvatar from './ImageAvatar';
 import { Spinner, LoadingOverlay, PageLoader, Skeleton } from './Spinner';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './Card';
 import { Badge, StatusBadge } from './Badge';
@@ -29,5 +30,6 @@ export {
     useToast,
 
     EmailVerificationBanner,
-    AvatarUpload
+    AvatarUpload,
+    ImageAvatar
 };

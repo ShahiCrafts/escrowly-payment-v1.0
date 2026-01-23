@@ -36,7 +36,7 @@ const Toast = ({ id, type, message, onClose }) => {
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className={cn(
-                'flex items-start gap-3 w-full max-w-sm p-4 bg-white rounded-lg shadow-lg border',
+                'flex items-start gap-3 w-full max-w-sm p-4 bg-white rounded-lg border',
                 type === 'error' && 'border-red-200',
                 type === 'success' && 'border-emerald-200',
                 type === 'warning' && 'border-yellow-200',
