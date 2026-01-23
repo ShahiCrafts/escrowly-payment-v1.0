@@ -135,8 +135,8 @@ const createTransactionValidation = [
     .withMessage('Amount must be between 1 and 1,000,000'),
   body('currency')
     .optional()
-    .isIn(['usd', 'eur', 'gbp'])
-    .withMessage('Currency must be usd, eur, or gbp'),
+    .isIn(['usd', 'eur', 'gbp', 'npr', 'inr'])
+    .withMessage('Currency must be usd, eur, gbp, npr, or inr'),
   body('sellerEmail')
     .optional()
     .isEmail()
