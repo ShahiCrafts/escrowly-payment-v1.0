@@ -72,6 +72,91 @@ const userSchema = new mongoose.Schema({
     connectAccountId: String,
     connectOnboarded: { type: Boolean, default: false }
   },
+  notificationPreferences: {
+    emailTransactions: { type: Boolean, default: true },
+    emailMarketing: { type: Boolean, default: false },
+    emailSecurity: { type: Boolean, default: true },
+    inAppNotifications: { type: Boolean, default: true },
+    pushTransactions: { type: Boolean, default: true },
+    pushMessages: { type: Boolean, default: true }
+  },
+  trustScore: {
+    type: Number,
+    default: 100,
+    min: 0,
+    max: 100
+  },
+  stats: {
+    totalCompleted: { type: Number, default: 0 },
+    totalDisputed: { type: Number, default: 0 },
+    totalCancelled: { type: Number, default: 0 },
+    totalTransactionVolume: { type: Number, default: 0 },
+    monthlyUsage: {
+      amount: { type: Number, default: 0 },
+      count: { type: Number, default: 0 },
+      lastResetAt: { type: Date, default: Date.now }
+    }
+  },
+  kyc: {
+    status: {
+      type: String,
+      enum: ['not_started', 'pending', 'verified', 'rejected'],
+      default: 'not_started'
+    },
+    documentType: {
+      type: String,
+      enum: ['passport', 'nid', 'citizenship']
+    },
+    idNumber: { type: String },
+    fullName: { type: String },
+    gender: { type: String, enum: ['male', 'female', 'others'] },
+    maritalStatus: { type: String, enum: ['married', 'unmarried', 'other'] },
+    dob: {
+      ad: Date,
+      bs: String
+    },
+    panNumber: { type: String },
+    socialMediaId: { type: String },
+    familyDetails: {
+      fatherName: String,
+      motherName: String,
+      grandfatherName: String,
+      spouseName: String
+    },
+    permanentAddress: {
+      street: String,
+      ward: String,
+      municipality: String,
+      district: String,
+      province: String,
+      country: { type: String, default: 'Nepal' }
+    },
+    currentAddress: {
+      street: String,
+      ward: String,
+      municipality: String,
+      district: String,
+      province: String,
+      country: { type: String, default: 'Nepal' }
+    },
+    education: String,
+    occupation: String,
+    employerName: String,
+    position: String,
+    yearlyIncome: String,
+    incomeSource: String,
+    pepStatus: { type: Boolean, default: false },
+    beneficialOwner: { type: Boolean, default: false },
+    residenceStatus: String,
+    documents: [{
+      url: String,
+      publicId: String,
+      type: { type: String, enum: ['front', 'back', 'selfie', 'other'], default: 'other' }
+    }],
+    submittedAt: Date,
+    verifiedAt: Date,
+    rejectionReason: String
+  },
   passwordResetToken: String,
   passwordResetExpires: Date
 }, {
@@ -80,6 +165,8 @@ const userSchema = new mongoose.Schema({
     transform: function (doc, ret) {
       ret.id = ret._id;
       ret.mfaEnabled = doc.mfa?.enabled || false;
+      ret.trustScore = doc.trustScore || 100;
+      ret.stats = doc.stats || { totalCompleted: 0, totalDisputed: 0, totalCancelled: 0, totalTransactionVolume: 0 };
       delete ret.password;
       delete ret.mfa;
       delete ret.security;
