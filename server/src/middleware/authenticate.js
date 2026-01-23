@@ -1,5 +1,5 @@
 const { verifyAccessToken } = require('../utils/tokens');
-const { User } = require('../models');
+const { User, SystemSetting } = require('../models');
 
 const authenticate = async (req, res, next) => {
   try {
@@ -20,8 +20,21 @@ const authenticate = async (req, res, next) => {
     }
 
     if (user.isSuspended) {
-      return res.status(403).json({ message: 'Account suspended' });
+      const allowedSuspendedPaths = [
+        '/api/users/appeals',
+        '/api/auth/me'
+      ];
+
+      const isAllowed = allowedSuspendedPaths.some(path => req.originalUrl.includes(path));
+
+      if (!isAllowed) {
+        return res.status(403).json({ message: 'Account suspended', isSuspended: true });
+      }
     }
+
+    // Check for mandatory 2FA
+    // Mandatory 2FA check removed as per requirement
+    // Users can still optionally enable 2FA from their profile
 
     req.user = user;
     next();
