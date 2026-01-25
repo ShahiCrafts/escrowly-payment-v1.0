@@ -1,0 +1,15 @@
+{
+    "watch": [
+        "src",
+        "index.js",
+        ".env"
+    ],
+    "ext": "js,mjs,cjs,json",
+    "ignore": [
+        "logs/*",
+        "uploads/*",
+        "node_modules/*",
+        "*.test.js"
+    ],
+    "delay": "500"
+}
