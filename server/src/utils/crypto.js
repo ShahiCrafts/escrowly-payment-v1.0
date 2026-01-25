@@ -40,22 +40,27 @@ const encrypt = (text) => {
 };
 
 const decrypt = (encryptedText) => {
-  if (!encryptedText) return null;
+  try {
+    if (!encryptedText) return null;
 
-  const parts = encryptedText.split(':');
-  if (parts.length !== 3) return null;
+    const parts = encryptedText.split(':');
+    if (parts.length !== 3) return null;
 
-  const iv = Buffer.from(parts[0], 'hex');
-  const authTag = Buffer.from(parts[1], 'hex');
-  const encrypted = parts[2];
+    const iv = Buffer.from(parts[0], 'hex');
+    const authTag = Buffer.from(parts[1], 'hex');
+    const encrypted = parts[2];
 
-  const decipher = crypto.createDecipheriv(ALGORITHM, getEncryptionKey(), iv);
-  decipher.setAuthTag(authTag);
+    const decipher = crypto.createDecipheriv(ALGORITHM, getEncryptionKey(), iv);
+    decipher.setAuthTag(authTag);
 
-  let decrypted = decipher.update(encrypted, 'hex', 'utf8');
-  decrypted += decipher.final('utf8');
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
 
-  return decrypted;
+    return decrypted;
+  } catch (error) {
+    console.error('Decryption failed:', error.message);
+    return null; // Return null instead of throwing to prevent server crash during serialization
+  }
 };
 
 const hashSHA256 = (text) => {
