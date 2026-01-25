@@ -20,12 +20,14 @@ const getTransactions = async (req, res) => {
 
 const getTransaction = async (req, res) => {
   try {
-    const result = await escrowService.getTransactionById(req.params.id, req.user._id);
-    res.json(result);
+    await req.transaction.populate([
+      { path: 'buyer', select: 'email profile trustScore stripe.connectOnboarded' },
+      { path: 'seller', select: 'email profile trustScore stripe.connectOnboarded' },
+      { path: 'dispute.raisedBy', select: 'email profile trustScore stripe.connectOnboarded' },
+      { path: 'dispute.resolvedBy', select: 'email profile trustScore stripe.connectOnboarded' }
+    ]);
+    res.json({ transaction: req.transaction });
   } catch (error) {
-    if (error.message === 'Transaction not found' || error.message === 'Access denied') {
-      return res.status(404).json({ message: error.message });
-    }
     res.status(500).json({ message: error.message });
   }
 };
@@ -41,7 +43,7 @@ const getStats = async (req, res) => {
 
 const acceptTransaction = async (req, res) => {
   try {
-    const result = await escrowService.acceptTransaction(req.params.id, req.user, req);
+    const result = await escrowService.acceptTransaction(req.transaction, req.user, req);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -50,7 +52,7 @@ const acceptTransaction = async (req, res) => {
 
 const markAsDelivered = async (req, res) => {
   try {
-    const result = await escrowService.markAsDelivered(req.params.id, req.user, req);
+    const result = await escrowService.markAsDelivered(req.transaction, req.user, req);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -59,7 +61,7 @@ const markAsDelivered = async (req, res) => {
 
 const releaseFunds = async (req, res) => {
   try {
-    const result = await escrowService.releaseFunds(req.params.id, req.user, req);
+    const result = await escrowService.releaseFunds(req.transaction, req.user, req);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -69,7 +71,7 @@ const releaseFunds = async (req, res) => {
 const raiseDispute = async (req, res) => {
   try {
     const { reason } = req.body;
-    const result = await escrowService.raiseDispute(req.params.id, reason, req.user, req);
+    const result = await escrowService.raiseDispute(req.transaction, reason, req.user, req);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -79,7 +81,7 @@ const raiseDispute = async (req, res) => {
 const cancelTransaction = async (req, res) => {
   try {
     const { reason } = req.body;
-    const result = await escrowService.cancelTransaction(req.params.id, reason, req.user, req);
+    const result = await escrowService.cancelTransaction(req.transaction, reason, req.user, req);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -88,7 +90,7 @@ const cancelTransaction = async (req, res) => {
 
 const releaseMilestone = async (req, res) => {
   try {
-    const result = await escrowService.releaseMilestone(req.params.id, req.params.milestoneId, req.user, req);
+    const result = await escrowService.releaseMilestone(req.transaction, req.params.milestoneId, req.user, req);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -100,7 +102,7 @@ const toggleDeliverable = async (req, res) => {
   try {
     const { deliverableId, completed } = req.body;
     const result = await escrowService.toggleDeliverable(
-      req.params.id,
+      req.transaction,
       req.params.milestoneId,
       deliverableId,
       completed,
@@ -118,7 +120,7 @@ const addMilestoneNote = async (req, res) => {
   try {
     const { content } = req.body;
     const result = await escrowService.addMilestoneNote(
-      req.params.id,
+      req.transaction,
       req.params.milestoneId,
       content,
       req.user,
@@ -134,7 +136,7 @@ const addMilestoneNote = async (req, res) => {
 const submitMilestone = async (req, res) => {
   try {
     const result = await escrowService.submitMilestone(
-      req.params.id,
+      req.transaction,
       req.params.milestoneId,
       req.user,
       req
@@ -149,7 +151,7 @@ const submitMilestone = async (req, res) => {
 const approveMilestone = async (req, res) => {
   try {
     const result = await escrowService.approveMilestone(
-      req.params.id,
+      req.transaction,
       req.params.milestoneId,
       req.user,
       req
@@ -163,7 +165,7 @@ const approveMilestone = async (req, res) => {
 // Agreement - Get
 const getAgreement = async (req, res) => {
   try {
-    const result = await escrowService.getAgreement(req.params.id, req.user);
+    const result = await escrowService.getAgreement(req.transaction, req.user);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -175,7 +177,7 @@ const createAgreement = async (req, res) => {
   try {
     const { title, terms } = req.body;
     const result = await escrowService.createAgreement(
-      req.params.id,
+      req.transaction,
       { title, terms },
       req.user,
       req
@@ -189,7 +191,7 @@ const createAgreement = async (req, res) => {
 // Agreement - Accept
 const acceptAgreement = async (req, res) => {
   try {
-    const result = await escrowService.acceptAgreement(req.params.id, req.user, req);
+    const result = await escrowService.acceptAgreement(req.transaction, req.user, req);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -199,7 +201,7 @@ const acceptAgreement = async (req, res) => {
 // Audit Log - Get
 const getAuditLog = async (req, res) => {
   try {
-    const result = await escrowService.getAuditLog(req.params.id, req.user);
+    const result = await escrowService.getAuditLog(req.transaction, req.user);
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
