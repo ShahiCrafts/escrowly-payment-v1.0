@@ -143,27 +143,34 @@ const Register = () => {
                     </div>
 
                     {/* Progress Steps */}
-                    <div className="mb-6">
-                        <div className="flex items-center justify-between">
+                    <div className="mb-12 mt-2">
+                        <div className="flex items-center w-full">
                             {[1, 2, 3].map((s, index) => (
-                                <div key={s} className="flex items-center flex-1">
-                                    <div className="flex flex-col items-center flex-1">
-                                        <div className={`w-9 h-9 rounded-full flex items-center justify-center text-[13px] font-medium transition-colors ${step >= s
+                                <div key={s} className={`flex items-center ${s < 3 ? 'flex-1' : ''}`}>
+                                    <div className="relative flex flex-col items-center">
+                                        <div className={`z-10 w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${step >= s
                                             ? 'bg-blue-600 text-white'
                                             : 'bg-neutral-100 text-neutral-400'
                                             }`}>
                                             {step > s ? (
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                                                 </svg>
                                             ) : s}
                                         </div>
-                                        <span className={`text-[11px] mt-1.5 font-medium ${step >= s ? 'text-blue-600' : 'text-neutral-400'}`}>
-                                            {stepLabels[index]}
-                                        </span>
+                                        <div className="absolute -bottom-7 whitespace-nowrap text-center">
+                                            <span className={`text-[11px] font-bold uppercase tracking-wider ${step >= s ? 'text-blue-600' : 'text-neutral-400'}`}>
+                                                {stepLabels[index]}
+                                            </span>
+                                        </div>
                                     </div>
                                     {s < 3 && (
-                                        <div className={`h-[2px] flex-1 mx-2 -mt-5 ${step > s ? 'bg-blue-600' : 'bg-neutral-100'}`}></div>
+                                        <div className="flex-1 mx-2 h-[2px] bg-neutral-100 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-blue-600 transition-all duration-500 ease-out"
+                                                style={{ width: step > s ? '100%' : '0%' }}
+                                            />
+                                        </div>
                                     )}
                                 </div>
                             ))}
