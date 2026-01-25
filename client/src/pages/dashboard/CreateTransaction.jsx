@@ -87,7 +87,10 @@ const CreateTransaction = () => {
                             <CardDescription>Enter the transaction details and conditions</CardDescription>
                         </CardHeader>
                         <CardContent className="p-6 sm:p-8">
-                            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                            <form
+                                onSubmit={handleSubmit(onSubmit, (err) => console.log('Validation Errors:', err))}
+                                className="space-y-6"
+                            >
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-1.5">
                                         Escrow Title
@@ -217,40 +220,54 @@ const CreateTransaction = () => {
                                     </div>
 
                                     {useMilestones && (
-                                        <div className="space-y-3">
+                                        <div className="space-y-4">
                                             {fields.map((field, index) => (
-                                                <div key={field.id} className="flex gap-3">
-                                                    <div className="flex-1">
-                                                        <input
-                                                            placeholder="Milestone title (e.g., Initial Draft)"
-                                                            className="w-full h-11 px-3.5 bg-white border border-slate-200 rounded-xl text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                                            {...register(`milestones.${index}.title`)}
-                                                        />
-                                                    </div>
-                                                    <div className="w-32">
-                                                        <div className="relative">
-                                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                                                <span className="text-slate-500 text-sm">{currencySymbol}</span>
-                                                            </div>
+                                                <div key={field.id} className="space-y-1.5">
+                                                    <div className="flex gap-3">
+                                                        <div className="flex-1">
                                                             <input
-                                                                type="number"
-                                                                step="0.01"
-                                                                placeholder="0.00"
-                                                                className="w-full h-11 pl-8 pr-3 bg-white border border-slate-200 rounded-xl text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all"
-                                                                {...register(`milestones.${index}.amount`)}
+                                                                placeholder="Milestone title (e.g., Initial Draft)"
+                                                                className={cn(
+                                                                    "w-full h-11 px-3.5 bg-white border rounded-xl text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all",
+                                                                    errors.milestones?.[index]?.title ? "border-red-500/50" : "border-slate-200"
+                                                                )}
+                                                                {...register(`milestones.${index}.title`)}
                                                             />
                                                         </div>
+                                                        <div className="w-32">
+                                                            <div className="relative">
+                                                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                                    <span className="text-slate-500 text-sm">{currencySymbol}</span>
+                                                                </div>
+                                                                <input
+                                                                    type="number"
+                                                                    step="0.01"
+                                                                    placeholder="0.00"
+                                                                    className={cn(
+                                                                        "w-full h-11 pl-8 pr-3 bg-white border rounded-xl text-[15px] text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all",
+                                                                        errors.milestones?.[index]?.amount ? "border-red-500/50" : "border-slate-200"
+                                                                    )}
+                                                                    {...register(`milestones.${index}.amount`)}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        {fields.length > 1 && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => remove(index)}
+                                                                className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                            >
+                                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                </svg>
+                                                            </button>
+                                                        )}
                                                     </div>
-                                                    {fields.length > 1 && (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => remove(index)}
-                                                            className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                        >
-                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                        </button>
+                                                    {(errors.milestones?.[index]?.title || errors.milestones?.[index]?.amount) && (
+                                                        <div className="flex gap-2 text-red-500 text-[11px] px-1">
+                                                            {errors.milestones?.[index]?.title && <span>&bull; {errors.milestones[index].title.message}</span>}
+                                                            {errors.milestones?.[index]?.amount && <span>&bull; {errors.milestones[index].amount.message}</span>}
+                                                        </div>
                                                     )}
                                                 </div>
                                             ))}
