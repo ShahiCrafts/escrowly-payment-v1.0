@@ -43,6 +43,7 @@ const AvatarUpload = ({ currentAvatar, onUpload, onRemove, firstName, lastName }
             <div className="flex flex-col gap-3">
                 <div className="flex gap-3">
                     <Button
+                        type="button"
                         variant="secondary"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
@@ -52,6 +53,7 @@ const AvatarUpload = ({ currentAvatar, onUpload, onRemove, firstName, lastName }
                     </Button>
                     {currentAvatar && (
                         <Button
+                            type="button"
                             variant="danger"
                             onClick={onRemove}
                             disabled={isUploading}
