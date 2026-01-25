@@ -27,6 +27,10 @@ const Login = () => {
 
     useEffect(() => {
         if (user) {
+            if (user.isSuspended) {
+                navigate('/suspended');
+                return;
+            }
             const targetPath = user.role === 'admin' ? '/admin' : '/dashboard';
             navigate(targetPath);
         }
@@ -55,6 +59,10 @@ const Login = () => {
                 console.log('Navigating to MFA verify');
                 navigate('/auth/mfa-verify');
             } else {
+                if (result.user?.isSuspended) {
+                    navigate('/suspended');
+                    return;
+                }
                 const targetPath = result.user?.role === 'admin' ? '/admin' : '/dashboard';
                 console.log(`Navigating to ${targetPath}`);
                 navigate(targetPath);
@@ -129,37 +137,37 @@ const Login = () => {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                         </div>
-                        <span className="text-xl font-semibold text-neutral-900 tracking-tight">Escrowly</span>
+                        <span className="text-xl font-semibold text-slate-900 tracking-tight">Escrowly</span>
                     </Link>
 
                     {/* Header */}
                     <div className="mb-8">
-                        <h2 className="text-2xl font-semibold text-neutral-900 tracking-tight">Welcome back</h2>
-                        <p className="text-neutral-500 mt-1.5 text-[15px]">Sign in to your account</p>
+                        <h2 className="text-2xl font-semibold text-slate-900 tracking-tight">Welcome back</h2>
+                        <p className="text-slate-500 mt-1.5 text-[15px]">Sign in to your account</p>
                     </div>
 
                     {/* Form */}
                     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                         <div>
-                            <label className="block text-[13px] font-medium text-neutral-600 mb-1.5">Email</label>
+                            <label className="block text-[13px] font-medium text-slate-600 mb-1.5">Email</label>
                             <input
                                 type="email"
                                 placeholder="name@example.com"
                                 autoComplete="email"
-                                className={`w-full h-11 px-3.5 border rounded-lg text-[15px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors.email ? 'border-red-300' : 'border-neutral-200'}`}
+                                className={`w-full h-11 px-3.5 bg-white border rounded-lg text-[15px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors.email ? 'border-red-500/50' : 'border-slate-300'}`}
                                 {...register('email')}
                             />
                             {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                         </div>
 
                         <div>
-                            <label className="block text-[13px] font-medium text-neutral-600 mb-1.5">Password</label>
+                            <label className="block text-[13px] font-medium text-slate-600 mb-1.5">Password</label>
                             <div className="relative">
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     placeholder="Enter your password"
                                     autoComplete="current-password"
-                                    className={`w-full h-11 px-3.5 pr-11 border rounded-lg text-[15px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors.password ? 'border-red-300' : 'border-neutral-200'}`}
+                                    className={`w-full h-11 px-3.5 pr-11 bg-white border rounded-lg text-[15px] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors.password ? 'border-red-500/50' : 'border-slate-300'}`}
                                     {...register('password')}
                                 />
                                 <button
@@ -189,9 +197,9 @@ const Login = () => {
                                     type="checkbox"
                                     checked={rememberMe}
                                     onChange={(e) => setRememberMe(e.target.checked)}
-                                    className="w-4 h-4 rounded border-neutral-300 text-blue-600 focus:ring-blue-500"
+                                    className="w-4 h-4 rounded border-slate-300 bg-white text-blue-600 focus:ring-blue-500"
                                 />
-                                <span className="text-[13px] text-neutral-600">Remember me</span>
+                                <span className="text-[13px] text-slate-600">Remember me</span>
                             </label>
                             <button
                                 type="button"
@@ -210,17 +218,17 @@ const Login = () => {
                     {/* Divider */}
                     <div className="relative my-6">
                         <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-neutral-100"></div>
+                            <div className="w-full border-t border-slate-200"></div>
                         </div>
                         <div className="relative flex justify-center">
-                            <span className="bg-white px-3 text-[13px] text-neutral-400">or</span>
+                            <span className="bg-gray-50 px-3 text-[13px] text-slate-500">or</span>
                         </div>
                     </div>
 
                     {/* Google Sign In */}
                     <a
                         href={`${API_BASE_URL}/auth/google`}
-                        className="flex w-full h-11 items-center justify-center gap-2.5 border border-neutral-200 rounded-lg text-[14px] font-medium text-neutral-700 hover:bg-neutral-50 hover:border-neutral-300 active:scale-[0.98] transition-all"
+                        className="flex w-full h-11 items-center justify-center gap-2.5 border border-slate-200 bg-white rounded-lg text-[14px] font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:scale-[0.98] transition-all"
                     >
                         <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24">
                             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -232,7 +240,7 @@ const Login = () => {
                     </a>
 
                     {/* Sign up link */}
-                    <p className="text-center text-neutral-500 text-[14px] mt-8">
+                    <p className="text-center text-slate-500 text-[14px] mt-8">
                         Don't have an account?{' '}
                         <Link to="/auth/register" className="text-blue-600 hover:text-blue-700 font-medium">
                             Sign up
