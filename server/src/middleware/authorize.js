@@ -18,15 +18,16 @@ const isTransactionParty = async (req, res, next) => {
   const { Transaction } = require('../models');
 
   try {
-    const transaction = await Transaction.findById(req.params.id);
+    const transactionId = req.params.id || req.params.transactionId;
+    const transaction = await Transaction.findById(transactionId);
 
     if (!transaction) {
       return res.status(404).json({ message: 'Transaction not found' });
     }
 
     const userId = req.user._id.toString();
-    const isBuyer = transaction.buyer.toString() === userId;
-    const isSeller = transaction.seller && transaction.seller.toString() === userId;
+    const isBuyer = transaction.isBuyer(userId);
+    const isSeller = transaction.isSeller(userId);
     const isAdmin = req.user.role === 'admin';
 
     if (!isBuyer && !isSeller && !isAdmin) {
