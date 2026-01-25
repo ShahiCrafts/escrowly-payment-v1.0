@@ -9,7 +9,8 @@ const {
   xssClean,
   securityHeaders,
   apiLimiter,
-  checkMaintenanceMode
+  checkMaintenanceMode,
+  csrfProtection
 } = require('./middleware');
 const {
   authRoutes,
@@ -53,11 +54,13 @@ app.use('/uploads', express.static('uploads'));
 app.use('/api', apiLimiter);
 app.use(checkMaintenanceMode);
 
-app.get('/api/csrf-token', (req, res) => {
-  res.json({ csrfToken: 'csrf-token-placeholder' });
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
 });
 
 app.use('/api/auth', authRoutes);
+app.use(csrfProtection);
+
 app.use('/api/escrow', escrowRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/users', userRoutes);
@@ -69,12 +72,20 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 app.use((req, res) => {
   res.status(404).json({ message: 'Route not found' });
 });
 
 app.use((err, req, res, next) => {
   logger.error('Unhandled error', { error: err.message, stack: err.stack });
+
+  if (err.code === 'EBADCSRFTOKEN') {
+    return res.status(403).json({
+      message: 'Invalid CSRF token. Please refresh the page.'
+    });
+  }
 
   if (err.name === 'ValidationError') {
     return res.status(400).json({
