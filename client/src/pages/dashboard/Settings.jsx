@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -8,7 +8,14 @@ import { Button, Card, CardContent, CardHeader, CardTitle, CardDescription, Moda
 import PasswordStrengthMeter from '../../components/common/PasswordStrengthMeter';
 import api from '../../services/api';
 import { uploadAvatar, removeAvatar } from '../../services/user.service';
+import {
+    HiOutlineLockClosed,
+    HiOutlineChevronRight,
+    HiOutlineXCircle,
+    HiCheck
+} from 'react-icons/hi2';
 import { toast } from 'react-toastify';
+import { socketService } from '../../services/socket';
 import { cn } from '../../utils/cn';
 
 const profileSchema = z.object({
@@ -30,6 +37,133 @@ const passwordSchema = z.object({
     message: "Passwords don't match",
     path: ['confirmPassword']
 });
+
+const TransactionLimitCard = ({ user }) => {
+    const [stats, setStats] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+
+    const kycStatus = user?.kyc?.status || 'not_started';
+    const isVerified = kycStatus === 'verified';
+    const isPending = kycStatus === 'pending';
+
+    useEffect(() => {
+        const fetchLimits = async () => {
+            try {
+                const { data } = await api.get('/users/limits');
+                setStats(data);
+            } catch (error) {
+                console.error('Failed to fetch limit stats');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchLimits();
+    }, []);
+
+    if (loading) return <div className="h-48 animate-pulse bg-slate-50 rounded-2xl" />;
+
+    const currentTier = stats?.tier || 'Starter';
+    const volume = stats?.volume || { used: 0, limit: 50000, percentage: 0 };
+    const count = stats?.count || { used: 0, limit: 5, percentage: 0 };
+
+    return (
+        <Card className="overflow-hidden border-slate-100 shadow-none">
+            <CardHeader>
+                <CardTitle>Transaction Limits</CardTitle>
+                <CardDescription>Monitor your monthly withdrawal limits and usage history.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-0 border-t-[0.5px] border-slate-100">
+                <div className="flex flex-col lg:flex-row">
+                    {/* Left Section: Limit Info */}
+                    <div className="flex-1 px-8 py-5 space-y-4">
+                        <div className="flex items-center">
+                            <div>
+                                <span className="text-[26px] font-black text-slate-900 tracking-tight">
+                                    {currentTier}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Progress Bars */}
+                        <div className="grid md:grid-cols-2 gap-8">
+                            {/* Monthly Volume */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
+                                    <span className="text-slate-500">Monthly Volume Usage</span>
+                                    <span className="text-blue-600 font-mono text-[11px]">{volume.percentage.toFixed(0)}%</span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                        className={cn(
+                                            "h-full transition-all duration-1000 ease-out rounded-full",
+                                            volume.percentage > 80 ? "bg-amber-500" : "bg-blue-600"
+                                        )}
+                                        style={{ width: `${Math.max(volume.percentage, 2)}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between text-[11px] text-slate-400 font-bold uppercase tracking-tighter mt-1.5">
+                                    <span>Rs. {volume.used.toLocaleString()} used</span>
+                                    <span className="text-[12px]">Limit: Rs. {volume.limit.toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            {/* Transaction Count */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider">
+                                    <span className="text-slate-500">Monthly Transactions</span>
+                                    <span className="text-indigo-600 font-mono text-[11px]">{count.used} / {count.limit}</span>
+                                </div>
+                                <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                                    <div
+                                        className={cn(
+                                            "h-full transition-all duration-1000 ease-out rounded-full",
+                                            count.percentage > 80 ? "bg-amber-500" : "bg-indigo-600"
+                                        )}
+                                        style={{ width: `${Math.max(count.percentage, 2)}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between text-[11px] text-slate-400 font-bold uppercase tracking-tighter mt-1.5">
+                                    <span>{count.used} initiated</span>
+                                    <span>{count.limit} max allowed</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Section: Upgrade CTA */}
+                    {!isVerified && (
+                        <div className={cn(
+                            "lg:w-56 px-6 py-5 flex flex-col justify-center items-center text-center gap-2 border-t lg:border-t-0 lg:border-l border-slate-100 transition-all",
+                            isPending ? "bg-amber-50/10" : "bg-slate-50/30"
+                        )}>
+                            <div className="space-y-1">
+                                <p className="text-sm font-black text-slate-900 uppercase tracking-[0.1em]">
+                                    {isPending ? 'Verification Pending' : 'Higher Limits?'}
+                                </p>
+                                <div className="text-xs text-slate-500 font-medium leading-relaxed">
+                                    {isPending ? (
+                                        'Your limit will upgrade to Rs. 1,000,000 once verified.'
+                                    ) : (
+                                        <>
+                                            <p className="mb-1">Unlock Rs. 1M monthly limit.</p>
+                                            <Link
+                                                to="/dashboard/kyc"
+                                                className="text-blue-600 hover:text-blue-700 font-bold border-b border-blue-600/30 hover:border-blue-600 transition-all"
+                                            >
+                                                Verify your identity (KYC)
+                                            </Link>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
 
 const Settings = () => {
     const {
@@ -53,7 +187,7 @@ const Settings = () => {
     const getInitialTab = () => {
         const params = new URLSearchParams(window.location.search);
         const tab = params.get('tab');
-        const validTabs = ['profile', 'security', 'notifications', 'payments', 'preferences'];
+        const validTabs = ['profile', 'limits', 'security', 'notifications', 'payments', 'preferences'];
         return validTabs.includes(tab) ? tab : 'profile';
     };
 
@@ -104,6 +238,22 @@ const Settings = () => {
         pushMessages: user?.notificationPreferences?.pushMessages ?? true
     });
 
+    const [cancellingKYC, setCancellingKYC] = useState(false);
+
+    const handleCancelKYC = async () => {
+        if (!window.confirm('Are you sure you want to cancel your identity verification application?')) return;
+        setCancellingKYC(true);
+        try {
+            await api.post('/users/kyc/cancel');
+            await refreshUser();
+            toast.success('Verification application cancelled');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to cancel verification');
+        } finally {
+            setCancellingKYC(false);
+        }
+    };
+
     const {
         register: registerProfile,
         handleSubmit: handleSubmitProfile,
@@ -128,6 +278,23 @@ const Settings = () => {
     });
 
     const newPassword = watchPassword('newPassword');
+
+    useEffect(() => {
+        const socket = socketService.connect();
+        if (socket && user?._id) {
+            socketService.joinUserRoom(user._id);
+            socketService.onKYCStatusUpdate((data) => {
+                const statusLabel = data.status === 'verified' ? 'verified' : 'rejected';
+                toast.info(`Your identity verification has been ${statusLabel}.`, {
+                    autoClose: 5000
+                });
+                refreshUser(); // Update global auth state
+            });
+        }
+        return () => {
+            socketService.removeKYCStatusListener();
+        };
+    }, [user?._id, refreshUser]);
 
     useEffect(() => {
         const checkStripe = async () => {
@@ -191,7 +358,8 @@ const Settings = () => {
             resetPasswordForm();
             toast.success('Password changed successfully');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to change password');
+            const message = error.response?.data?.errors?.[0]?.message || error.response?.data?.message || 'Failed to change password';
+            toast.error(message);
         }
     };
 
@@ -314,6 +482,7 @@ const Settings = () => {
 
     const tabs = [
         { id: 'profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+        { id: 'limits', label: 'Transaction Limits', icon: 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6' },
         { id: 'security', label: 'Security', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z' },
         { id: 'notifications', label: 'Notifications', icon: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9' },
         { id: 'payments', label: 'Payments', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z' },
@@ -349,7 +518,7 @@ const Settings = () => {
             </div>
 
             {!user?.isEmailVerified && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8 flex items-start gap-4 shadow-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-8 flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                     <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
                         <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -388,6 +557,17 @@ const Settings = () => {
                                 {user?.profile?.firstName} {user?.profile?.lastName}
                             </h3>
                             <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                            <div
+                                className="flex items-center gap-1.5 mt-2 bg-slate-50 px-2.5 py-1 rounded-lg shadow-none w-fit cursor-help"
+                                title={`Trust Score: ${user?.trustScore || 100}%`}
+                            >
+                                <img
+                                    src={`/Badge_0${Math.min(5, Math.max(1, Math.floor((user?.trustScore || 0) / 20) + ((user?.trustScore || 0) % 20 > 0 || user?.trustScore === 0 ? 1 : 0)))}.svg`}
+                                    alt="Trust Badge"
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-[11px] font-bold text-slate-700">{user?.trustScore || 100}% Trust Score</span>
+                            </div>
                         </div>
                     </div>
 
@@ -419,8 +599,53 @@ const Settings = () => {
                         <div className="space-y-8">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Personal Information</CardTitle>
-                                    <CardDescription>Update your personal details here</CardDescription>
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div>
+                                            <CardTitle>Personal Information</CardTitle>
+                                            <CardDescription>Update your personal details here</CardDescription>
+                                        </div>
+                                        {user?.kyc?.status !== 'verified' && (
+                                            <div className={cn(
+                                                "flex items-center gap-3 px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-[0.1em] transition-all shadow-none",
+                                                user?.kyc?.status === 'pending'
+                                                    ? "bg-amber-50/50 text-amber-700"
+                                                    : "bg-slate-50 text-slate-500"
+                                            )}>
+                                                <span className="opacity-60">KYC Status:</span>
+                                                <span className="text-slate-900 font-extrabold">
+                                                    {user?.kyc?.status === 'pending' ? 'In Review' : 'Not Verified'}
+                                                </span>
+                                                <div className="w-px h-3 bg-current opacity-20" />
+                                                <button
+                                                    onClick={() => navigate('/dashboard/kyc')}
+                                                    className="hover:text-blue-600 transition-colors uppercase tracking-widest font-black"
+                                                >
+                                                    {user?.kyc?.status === 'pending' ? 'View Status' : 'Verify Now'}
+                                                </button>
+                                                {user?.kyc?.status === 'pending' && (
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-px h-3 bg-current opacity-20" />
+                                                        <button
+                                                            onClick={handleCancelKYC}
+                                                            disabled={cancellingKYC}
+                                                            className="text-slate-400 hover:text-red-500 transition-colors"
+                                                            title="Cancel Application"
+                                                        >
+                                                            <HiOutlineXCircle className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {user?.kyc?.status === 'verified' && (
+                                            <div className="flex items-center gap-2 bg-emerald-50 px-4 py-2 rounded-xl shadow-none text-emerald-700">
+                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                                </svg>
+                                                <span className="text-xs font-bold uppercase tracking-widest">Verified User</span>
+                                            </div>
+                                        )}
+                                    </div>
                                 </CardHeader>
                                 <CardContent className="space-y-8">
                                     <div className="border-b border-slate-100 pb-8">
@@ -452,8 +677,12 @@ const Settings = () => {
                                             label="Email Address"
                                             value={user?.email || ''}
                                             disabled
+                                            readOnly
                                             className="bg-slate-50 text-slate-500"
                                             hint="Email cannot be changed"
+                                            rightIcon={user?.isEmailVerified && (
+                                                <HiCheck className="w-4 h-4 text-emerald-500" />
+                                            )}
                                         />
 
                                         <Input
@@ -471,319 +700,281 @@ const Settings = () => {
                                     </form>
                                 </CardContent>
                             </Card>
+                        </div>
+                    )}
 
-                            {/* Identity Verification card (moved from KYC section) */}
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Identity Verification</CardTitle>
-                                    <CardDescription>Securely verify your identity to increase limits</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className={cn(
-                                        "p-6 rounded-xl border flex flex-col md:flex-row items-center gap-6",
-                                        user?.kyc?.status === 'verified' ? "bg-emerald-50/20 border-emerald-100" :
-                                            user?.kyc?.status === 'pending' ? "bg-blue-50/20 border-blue-100" :
-                                                "bg-blue-600 text-white border-blue-700 shadow-lg shadow-blue-500/20"
-                                    )}>
-                                        <div className={cn(
-                                            "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 border",
-                                            user?.kyc?.status === 'verified' ? "bg-white text-emerald-600 border-emerald-100" :
-                                                user?.kyc?.status === 'pending' ? "bg-white text-blue-600 border-blue-100" :
-                                                    "bg-white/20 text-white border-white/20"
-                                        )}>
-                                            {user?.kyc?.status === 'verified' ? (
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            ) : user?.kyc?.status === 'pending' ? (
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                            ) : (
-                                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                                            )}
-                                        </div>
-                                        <div className="flex-1 text-center md:text-left">
-                                            <h3 className={cn("text-base font-bold", user?.kyc?.status === 'not_started' || user?.kyc?.status === 'rejected' ? "text-white" : "text-slate-900")}>
-                                                {user?.kyc?.status === 'verified' ? 'Identity Verified' : user?.kyc?.status === 'pending' ? 'Review in Progress' : 'Boost Your Trust'}
-                                            </h3>
-                                            <p className={cn("text-xs font-medium mt-1 opacity-80", user?.kyc?.status === 'not_started' || user?.kyc?.status === 'rejected' ? "text-blue-50" : "text-slate-500")}>
-                                                {user?.kyc?.status === 'verified' ? 'Full platform access unlocked.' : user?.kyc?.status === 'pending' ? 'Reviewing your application (Est. 24h).' : 'Verify identity to unlock unlimited withdrawals.'}
-                                            </p>
-                                        </div>
-                                        <div className="flex-shrink-0 w-full md:w-auto">
-                                            {(user?.kyc?.status === 'not_started' || user?.kyc?.status === 'rejected') ? (
-                                                <Button
-                                                    onClick={() => navigate('/dashboard/kyc')}
-                                                    className="w-full md:w-auto bg-white text-blue-600 hover:bg-blue-50 px-8 font-black rounded-xl h-10 shadow-sm transition-all hover:scale-105"
-                                                >
-                                                    Start KYC
-                                                </Button>
-                                            ) : (
-                                                <div className="text-xs font-bold uppercase px-4 py-2 rounded-lg bg-black/5 text-slate-600 text-center border border-black/5">
-                                                    {user?.kyc?.status}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                    {/* TRANSACTION LIMITS TAB */}
+                    {activeTab === 'limits' && (
+                        <div className="space-y-6">
+                            <TransactionLimitCard user={user} />
                         </div>
                     )}
 
                     {/* SECURITY TAB */}
-                    {activeTab === 'security' && (
-                        <div className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Change Password</CardTitle>
-                                    <CardDescription>Update your password to keep your account secure</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <form onSubmit={handleSubmitPassword(onPasswordSubmit)} className="space-y-6">
-                                        <Input
-                                            type="password"
-                                            label="Current Password"
-                                            {...registerPassword('currentPassword')}
-                                            error={passwordErrors.currentPassword?.message}
-                                        />
-
-                                        <div className="space-y-2">
+                    {
+                        activeTab === 'security' && (
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Change Password</CardTitle>
+                                        <CardDescription>Update your password to keep your account secure</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <form onSubmit={handleSubmitPassword(onPasswordSubmit)} className="space-y-6">
                                             <Input
                                                 type="password"
-                                                label="New Password"
-                                                {...registerPassword('newPassword')}
-                                                error={passwordErrors.newPassword?.message}
+                                                label="Current Password"
+                                                {...registerPassword('currentPassword')}
+                                                error={passwordErrors.currentPassword?.message}
                                             />
-                                            <PasswordStrengthMeter password={newPassword} />
-                                        </div>
 
-                                        <Input
-                                            type="password"
-                                            label="Confirm New Password"
-                                            {...registerPassword('confirmPassword')}
-                                            error={passwordErrors.confirmPassword?.message}
-                                        />
-
-                                        <div className="pt-2">
-                                            <Button type="submit" isLoading={isPasswordSubmitting} variant="secondary">
-                                                Update Password
-                                            </Button>
-                                        </div>
-                                    </form>
-                                </CardContent>
-                            </Card>
-
-                            <Card>
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <CardTitle>Two-Factor Authentication</CardTitle>
-                                            <CardDescription>Add an extra layer of security to your account</CardDescription>
-                                        </div>
-                                        {user?.mfaEnabled && (
-                                            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-sm font-medium rounded-full border border-green-200">
-                                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                                </svg>
-                                                Enabled
-                                            </span>
-                                        )}
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    {user?.mfaEnabled ? (
-                                        <div className="flex flex-col sm:flex-row gap-3">
-                                            <Button variant="secondary" onClick={() => setShowDisableMfa(true)}>
-                                                Disable MFA
-                                            </Button>
-                                            <Button variant="ghost" onClick={() => setShowViewBackupCodesModal(true)}>
-                                                View Backup Codes
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                                            <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center flex-shrink-0">
-                                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                </svg>
+                                            <div className="space-y-2">
+                                                <Input
+                                                    type="password"
+                                                    label="New Password"
+                                                    {...registerPassword('newPassword')}
+                                                    error={passwordErrors.newPassword?.message}
+                                                />
+                                                <PasswordStrengthMeter password={newPassword} />
                                             </div>
-                                            <div className="flex-1">
-                                                <h4 className="font-medium text-slate-900">Authenticator App</h4>
-                                                <p className="text-sm text-slate-500 mt-0.5">
-                                                    Secure your account knowing that only you can access it.
-                                                </p>
+
+                                            <Input
+                                                type="password"
+                                                label="Confirm New Password"
+                                                {...registerPassword('confirmPassword')}
+                                                error={passwordErrors.confirmPassword?.message}
+                                            />
+
+                                            <div className="pt-2">
+                                                <Button type="submit" isLoading={isPasswordSubmitting} variant="secondary">
+                                                    Update Password
+                                                </Button>
                                             </div>
-                                            <Button onClick={handleSetupMFA} variant="secondary">Enable MFA</Button>
-                                        </div>
-                                    )}
-                                </CardContent>
-                            </Card>
+                                        </form>
+                                    </CardContent>
+                                </Card>
 
-                            {/* Session Management Card */}
-                            <Card>
-                                <CardHeader>
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <CardTitle>Session Management</CardTitle>
-                                            <CardDescription>Sign out of all other browsers and devices</CardDescription>
-                                        </div>
-                                        <Button variant="secondary" size="sm" onClick={() => setShowLogoutAllModal(true)} className="text-red-600 hover:bg-red-50">
-                                            Logout All Devices
-                                        </Button>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
-                                        <div className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-500">
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                            </svg>
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-semibold text-slate-900">Current Session</p>
-                                                <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full">Active Now</span>
-                                            </div>
-                                            <p className="text-xs text-slate-500 mt-0.5">This device - Chrome on Windows</p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    )}
-
-                    {/* NOTIFICATIONS TAB */}
-                    {activeTab === 'notifications' && (
-                        <div className="space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Notifications</CardTitle>
-                                    <CardDescription>Manage how you receive updates and alerts</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <NotificationToggle
-                                        label="Transaction Updates"
-                                        description="Email notifications for transaction milestones"
-                                        checked={notifications.emailTransactions}
-                                        onChange={() => handleNotificationChange('emailTransactions')}
-                                    />
-                                    <NotificationToggle
-                                        label="Security Alerts"
-                                        description="Email alerts for login attempts and security events"
-                                        checked={notifications.emailSecurity}
-                                        onChange={() => handleNotificationChange('emailSecurity')}
-                                    />
-                                    <NotificationToggle
-                                        label="In-App Notifications"
-                                        description="Show alerts in the dashboard notification center"
-                                        checked={notifications.inAppNotifications}
-                                        onChange={() => handleNotificationChange('inAppNotifications')}
-                                    />
-                                </CardContent>
-                            </Card>
-                        </div>
-                    )}
-
-                    {/* PAYMENTS TAB */}
-                    {activeTab === 'payments' && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Payout Settings</CardTitle>
-                                <CardDescription>Connect your payment account to receive payouts</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex items-start gap-5 p-5 bg-slate-50 rounded-xl border border-slate-200">
-                                    <div className="w-12 h-12 bg-[#635BFF] rounded-xl flex items-center justify-center flex-shrink-0 text-white">
-                                        <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
-                                            <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z" />
-                                        </svg>
-                                    </div>
-                                    <div className="flex-1">
+                                <Card>
+                                    <CardHeader>
                                         <div className="flex items-center justify-between">
                                             <div>
-                                                <h3 className="font-semibold text-slate-900 text-lg">Stripe Connect</h3>
-                                                <p className="text-sm text-slate-500 mt-1">
-                                                    Escrowly uses Stripe to ensure you get paid securely and on time.
-                                                </p>
+                                                <CardTitle>Two-Factor Authentication</CardTitle>
+                                                <CardDescription>Add an extra layer of security to your account</CardDescription>
                                             </div>
-                                            {stripeStatus?.isConnected && (
-                                                <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
+                                            {user?.mfaEnabled && (
+                                                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-700 text-sm font-medium rounded-full border border-green-200">
                                                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 01.414 0z" clipRule="evenodd" />
+                                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                                                     </svg>
-                                                    Connected
+                                                    Enabled
                                                 </span>
                                             )}
                                         </div>
-
-                                        {stripeStatus && !stripeStatus.isConnected && stripeStatus.details && (
-                                            <div className="mt-3 text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
-                                                Account connected but pending verification.
+                                    </CardHeader>
+                                    <CardContent>
+                                        {user?.mfaEnabled ? (
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <Button variant="secondary" onClick={() => setShowDisableMfa(true)}>
+                                                    Disable MFA
+                                                </Button>
+                                                <Button variant="ghost" onClick={() => setShowViewBackupCodesModal(true)}>
+                                                    View Backup Codes
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                                <div className="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                    </svg>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h4 className="font-medium text-slate-900">Authenticator App</h4>
+                                                    <p className="text-sm text-slate-500 mt-0.5">
+                                                        Secure your account knowing that only you can access it.
+                                                    </p>
+                                                </div>
+                                                <Button onClick={handleSetupMFA} variant="secondary">Enable MFA</Button>
                                             </div>
                                         )}
+                                    </CardContent>
+                                </Card>
 
-                                        <div className="mt-5">
-                                            <Button
-                                                onClick={handleConnectStripe}
-                                                isLoading={loadingStripe}
-                                                variant={stripeStatus?.isConnected ? 'secondary' : 'primary'}
-                                                className={cn(
-                                                    "h-10 px-6",
-                                                    !stripeStatus?.isConnected && "bg-[#635BFF] hover:bg-[#5851E1] border-transparent text-white"
-                                                )}
-                                            >
-                                                {stripeStatus?.isConnected ? 'Manage Stripe Account' : 'Connect with Stripe'}
+                                {/* Session Management Card */}
+                                <Card>
+                                    <CardHeader>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle>Session Management</CardTitle>
+                                                <CardDescription>Sign out of all other browsers and devices</CardDescription>
+                                            </div>
+                                            <Button variant="secondary" size="sm" onClick={() => setShowLogoutAllModal(true)} className="text-red-600 hover:bg-red-50">
+                                                Logout All Devices
                                             </Button>
                                         </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex items-center gap-4 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                                            <div className="w-10 h-10 bg-white border border-slate-200 rounded-lg flex items-center justify-center text-slate-500">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                </svg>
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-semibold text-slate-900">Current Session</p>
+                                                    <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[10px] font-black uppercase rounded-full">Active Now</span>
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-0.5">This device - Chrome on Windows</p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        )
+                    }
 
-                    {/* PREFERENCES TAB */}
-                    {activeTab === 'preferences' && (
-                        <div className="space-y-6">
+                    {/* NOTIFICATIONS TAB */}
+                    {
+                        activeTab === 'notifications' && (
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Notifications</CardTitle>
+                                        <CardDescription>Manage how you receive updates and alerts</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <NotificationToggle
+                                            label="Transaction Updates"
+                                            description="Email notifications for transaction milestones"
+                                            checked={notifications.emailTransactions}
+                                            onChange={() => handleNotificationChange('emailTransactions')}
+                                        />
+                                        <NotificationToggle
+                                            label="Security Alerts"
+                                            description="Email alerts for login attempts and security events"
+                                            checked={notifications.emailSecurity}
+                                            onChange={() => handleNotificationChange('emailSecurity')}
+                                        />
+                                        <NotificationToggle
+                                            label="In-App Notifications"
+                                            description="Show alerts in the dashboard notification center"
+                                            checked={notifications.inAppNotifications}
+                                            onChange={() => handleNotificationChange('inAppNotifications')}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        )
+                    }
+
+                    {/* PAYMENTS TAB */}
+                    {
+                        activeTab === 'payments' && (
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Transaction Defaults</CardTitle>
-                                    <CardDescription>Customize your default escrow settings</CardDescription>
+                                    <CardTitle>Payout Settings</CardTitle>
+                                    <CardDescription>Connect your payment account to receive payouts</CardDescription>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="max-w-md">
-                                        <label className="block text-sm font-medium text-slate-900 mb-1.5">Default Inspection Period</label>
-                                        <select className="w-full h-11 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all border-slate-200">
-                                            <option value="3">3 days</option>
-                                            <option value="7">7 days</option>
-                                            <option value="14">14 days (Recommended)</option>
-                                            <option value="30">30 days</option>
-                                        </select>
-                                        <p className="text-xs text-slate-500 mt-2">Default period for buyers to inspect goods after delivery.</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="border-red-100 bg-red-50/10">
-                                <CardHeader>
-                                    <CardTitle className="text-red-900">Danger Zone</CardTitle>
-                                    <CardDescription>Permanently delete your account and all associated data</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex items-center justify-between p-4 bg-white border border-red-100 rounded-xl">
-                                        <div>
-                                            <h4 className="text-sm font-bold text-slate-900">Delete Account</h4>
-                                            <p className="text-xs text-slate-500 mt-0.5">This action is permanent and cannot be undone.</p>
+                                    <div className="flex items-start gap-5 p-5 bg-slate-50 rounded-xl border border-slate-200">
+                                        <div className="w-12 h-12 bg-[#635BFF] rounded-xl flex items-center justify-center flex-shrink-0 text-white">
+                                            <svg className="w-6 h-6" viewBox="0 0 24 24" fill="currentColor">
+                                                <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z" />
+                                            </svg>
                                         </div>
-                                        <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)} className="px-6">
-                                            Delete My Account
-                                        </Button>
+                                        <div className="flex-1">
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <h3 className="font-semibold text-slate-900 text-lg">Stripe Connect</h3>
+                                                    <p className="text-sm text-slate-500 mt-1">
+                                                        Escrowly uses Stripe to ensure you get paid securely and on time.
+                                                    </p>
+                                                </div>
+                                                {stripeStatus?.isConnected && (
+                                                    <span className="flex items-center gap-1.5 text-green-600 text-sm font-medium bg-green-50 px-2.5 py-1 rounded-full border border-green-200">
+                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 01.414 0z" clipRule="evenodd" />
+                                                        </svg>
+                                                        Connected
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {stripeStatus && !stripeStatus.isConnected && stripeStatus.details && (
+                                                <div className="mt-3 text-sm text-amber-600 bg-amber-50 px-3 py-2 rounded-lg border border-amber-200">
+                                                    Account connected but pending verification.
+                                                </div>
+                                            )}
+
+                                            <div className="mt-5">
+                                                <Button
+                                                    onClick={handleConnectStripe}
+                                                    isLoading={loadingStripe}
+                                                    variant={stripeStatus?.isConnected ? 'secondary' : 'primary'}
+                                                    className={cn(
+                                                        "h-10 px-6",
+                                                        !stripeStatus?.isConnected && "bg-[#635BFF] hover:bg-[#5851E1] border-transparent text-white"
+                                                    )}
+                                                >
+                                                    {stripeStatus?.isConnected ? 'Manage Stripe Account' : 'Connect with Stripe'}
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
-                        </div>
-                    )}
-                </div>
-            </div>
+                        )
+                    }
+
+                    {/* PREFERENCES TAB */}
+                    {
+                        activeTab === 'preferences' && (
+                            <div className="space-y-6">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle>Transaction Defaults</CardTitle>
+                                        <CardDescription>Customize your default escrow settings</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="max-w-md">
+                                            <label className="block text-sm font-medium text-slate-900 mb-1.5">Default Inspection Period</label>
+                                            <select className="w-full h-11 px-3 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all border-slate-200">
+                                                <option value="3">3 days</option>
+                                                <option value="7">7 days</option>
+                                                <option value="14">14 days (Recommended)</option>
+                                                <option value="30">30 days</option>
+                                            </select>
+                                            <p className="text-xs text-slate-500 mt-2">Default period for buyers to inspect goods after delivery.</p>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-red-100 bg-red-50/10">
+                                    <CardHeader>
+                                        <CardTitle className="text-red-900">Danger Zone</CardTitle>
+                                        <CardDescription>Permanently delete your account and all associated data</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="flex items-center justify-between p-4 bg-white border border-red-100 rounded-xl">
+                                            <div>
+                                                <h4 className="text-sm font-bold text-slate-900">Delete Account</h4>
+                                                <p className="text-xs text-slate-500 mt-0.5">This action is permanent and cannot be undone.</p>
+                                            </div>
+                                            <Button variant="danger" size="sm" onClick={() => setShowDeleteModal(true)} className="px-6">
+                                                Delete My Account
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        )
+                    }
+                </div >
+            </div >
 
             {/* Modals */}
-            <Modal isOpen={showMfaModal} onClose={() => setShowMfaModal(false)} title="Setup Two-Factor Authentication">
+            < Modal isOpen={showMfaModal} onClose={() => setShowMfaModal(false)} title="Setup Two-Factor Authentication" >
                 <div className="space-y-6">
                     <div className="text-center">
                         <p className="text-sm text-slate-500 mb-4">
@@ -818,7 +1009,7 @@ const Settings = () => {
                         </Button>
                     </div>
                 </div>
-            </Modal>
+            </Modal >
 
             <Modal isOpen={showViewBackupCodesModal} onClose={() => { setShowViewBackupCodesModal(false); setViewBackupCodesPassword(''); }} title="View Backup Codes">
                 <div className="space-y-4">
@@ -946,7 +1137,7 @@ const Settings = () => {
                     </div>
                 </div>
             </Modal>
-        </div>
+        </div >
     );
 };
 
