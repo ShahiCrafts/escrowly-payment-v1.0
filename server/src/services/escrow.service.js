@@ -150,8 +150,10 @@ const createTransaction = async (data, initiator, req) => {
   return { transaction };
 };
 
-const acceptTransaction = async (transactionId, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const acceptTransaction = async (transactionOrId, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
 
   if (!transaction) {
     throw new Error('Transaction not found');
@@ -190,8 +192,10 @@ const acceptTransaction = async (transactionId, user, req) => {
   return { transaction };
 };
 
-const markAsDelivered = async (transactionId, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const markAsDelivered = async (transactionOrId, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
 
   if (!transaction) {
     throw new Error('Transaction not found');
@@ -228,8 +232,10 @@ const markAsDelivered = async (transactionId, user, req) => {
   return { transaction };
 };
 
-const releaseFunds = async (transactionId, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const releaseFunds = async (transactionOrId, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
 
   if (!transaction) {
     throw new Error('Transaction not found');
@@ -281,8 +287,10 @@ const releaseFunds = async (transactionId, user, req) => {
   return { transaction };
 };
 
-const releaseMilestone = async (transactionId, milestoneId, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const releaseMilestone = async (transactionOrId, milestoneId, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
 
   if (!transaction) {
     throw new Error('Transaction not found');
@@ -334,8 +342,10 @@ const releaseMilestone = async (transactionId, milestoneId, user, req) => {
   return { transaction };
 };
 
-const raiseDispute = async (transactionId, reason, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const raiseDispute = async (transactionOrId, reason, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
 
   if (!transaction) {
     throw new Error('Transaction not found');
@@ -391,8 +401,10 @@ const raiseDispute = async (transactionId, reason, user, req) => {
   return { transaction };
 };
 
-const cancelTransaction = async (transactionId, reason, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const cancelTransaction = async (transactionOrId, reason, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
 
   if (!transaction) {
     throw new Error('Transaction not found');
@@ -564,13 +576,14 @@ const autoReleaseExpiredInspections = async () => {
 // MILESTONE MANAGEMENT
 // ========================
 
-const toggleDeliverable = async (transactionId, milestoneId, deliverableId, completed, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const toggleDeliverable = async (transactionOrId, milestoneId, deliverableId, completed, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
-  const isBuyer = transaction.buyer.toString() === user._id.toString();
-  const isSeller = transaction.seller?.toString() === user._id.toString();
-  if (!isBuyer && !isSeller) throw new Error('Access denied');
+  if (!transaction.isParty(user._id)) throw new Error('Access denied');
 
   const milestone = transaction.milestones.id(milestoneId);
   if (!milestone) throw new Error('Milestone not found');
@@ -594,15 +607,16 @@ const toggleDeliverable = async (transactionId, milestoneId, deliverableId, comp
   return { transaction, message: 'Deliverable updated' };
 };
 
-const addMilestoneNote = async (transactionId, milestoneId, content, user, req) => {
+const addMilestoneNote = async (transactionOrId, milestoneId, content, user, req) => {
   if (!content?.trim()) throw new Error('Note content is required');
 
-  const transaction = await Transaction.findById(transactionId);
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
-  const isBuyer = transaction.buyer.toString() === user._id.toString();
-  const isSeller = transaction.seller?.toString() === user._id.toString();
-  if (!isBuyer && !isSeller) throw new Error('Access denied');
+  if (!transaction.isParty(user._id)) throw new Error('Access denied');
 
   const milestone = transaction.milestones.id(milestoneId);
   if (!milestone) throw new Error('Milestone not found');
@@ -623,8 +637,11 @@ const addMilestoneNote = async (transactionId, milestoneId, content, user, req) 
   return { transaction, message: 'Note added' };
 };
 
-const submitMilestone = async (transactionId, milestoneId, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const submitMilestone = async (transactionOrId, milestoneId, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
   const isSeller = transaction.seller?.toString() === user._id.toString();
@@ -655,8 +672,11 @@ const submitMilestone = async (transactionId, milestoneId, user, req) => {
   return { transaction, message: 'Milestone submitted for review' };
 };
 
-const approveMilestone = async (transactionId, milestoneId, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const approveMilestone = async (transactionOrId, milestoneId, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
   const isBuyer = transaction.buyer.toString() === user._id.toString();
@@ -689,15 +709,16 @@ const approveMilestone = async (transactionId, milestoneId, user, req) => {
 // AGREEMENT MANAGEMENT
 // ========================
 
-const getAgreement = async (transactionId, user) => {
-  const transaction = await Transaction.findById(transactionId);
+const getAgreement = async (transactionOrId, user) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
-  const isBuyer = transaction.buyer.toString() === user._id.toString();
-  const isSeller = transaction.seller?.toString() === user._id.toString();
-  if (!isBuyer && !isSeller) throw new Error('Access denied');
+  if (!transaction.isParty(user._id)) throw new Error('Access denied');
 
-  const agreement = await Agreement.getActiveAgreement(transactionId);
+  const agreement = await Agreement.getActiveAgreement(transaction._id);
 
   return {
     agreement,
@@ -705,29 +726,30 @@ const getAgreement = async (transactionId, user) => {
   };
 };
 
-const createAgreement = async (transactionId, { title, terms }, user, req) => {
+const createAgreement = async (transactionOrId, { title, terms }, user, req) => {
   if (!terms?.trim()) throw new Error('Agreement terms are required');
 
-  const transaction = await Transaction.findById(transactionId);
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
-  const isBuyer = transaction.buyer.toString() === user._id.toString();
-  const isSeller = transaction.seller?.toString() === user._id.toString();
-  if (!isBuyer && !isSeller) throw new Error('Access denied');
+  if (!transaction.isParty(user._id)) throw new Error('Access denied');
 
   // Deactivate existing agreements
   await Agreement.updateMany(
-    { transaction: transactionId, isActive: true },
+    { transaction: transaction._id, isActive: true },
     { isActive: false }
   );
 
   // Get latest version number
-  const latestAgreement = await Agreement.findOne({ transaction: transactionId })
+  const latestAgreement = await Agreement.findOne({ transaction: transaction._id })
     .sort({ version: -1 });
   const version = latestAgreement ? latestAgreement.version + 1 : 1;
 
   const agreement = await Agreement.create({
-    transaction: transactionId,
+    transaction: transaction._id,
     version,
     title: title || 'Transaction Agreement',
     terms: terms.trim(),
@@ -746,16 +768,17 @@ const createAgreement = async (transactionId, { title, terms }, user, req) => {
   return { agreement, message: 'Agreement created' };
 };
 
-const acceptAgreement = async (transactionId, user, req) => {
-  const transaction = await Transaction.findById(transactionId);
+const acceptAgreement = async (transactionOrId, user, req) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
-  const isBuyer = transaction.buyer.toString() === user._id.toString();
-  const isSeller = transaction.seller?.toString() === user._id.toString();
-  if (!isBuyer && !isSeller) throw new Error('Access denied');
+  if (!transaction.isParty(user._id)) throw new Error('Access denied');
 
   const agreement = await Agreement.findOne({
-    transaction: transactionId,
+    transaction: transaction._id,
     isActive: true
   });
 
@@ -787,17 +810,18 @@ const acceptAgreement = async (transactionId, user, req) => {
 // AUDIT LOG
 // ========================
 
-const getAuditLog = async (transactionId, user) => {
-  const transaction = await Transaction.findById(transactionId);
+const getAuditLog = async (transactionOrId, user) => {
+  const transaction = typeof transactionOrId === 'string'
+    ? await Transaction.findById(transactionOrId)
+    : transactionOrId;
+
   if (!transaction) throw new Error('Transaction not found');
 
-  const isBuyer = transaction.buyer.toString() === user._id.toString();
-  const isSeller = transaction.seller?.toString() === user._id.toString();
-  if (!isBuyer && !isSeller && user.role !== 'admin') throw new Error('Access denied');
+  if (!transaction.isParty(user._id) && user.role !== 'admin') throw new Error('Access denied');
 
   const logs = await AuditLog.find({
     category: 'transaction',
-    'metadata.transactionId': transactionId
+    'metadata.transactionId': transaction._id
   })
     .populate('user', 'email profile')
     .sort({ createdAt: -1 })
