@@ -52,7 +52,7 @@ class NotificationService {
      * @param {String} message - Notification message
      * @param {Object} emailOptions - Required email options (template function, data)
      */
-    async notifySecurity(user, title, message, emailOptions = {}) {
+    async notifySecurity(user, title, message, emailOptions = {}, metadata = {}) {
         try {
             const userObj = await this._getUser(user);
             if (!userObj) return;
@@ -61,7 +61,7 @@ class NotificationService {
 
             // 1. Create In-App Notification (If preferred)
             if (userObj.notificationPreferences?.inAppNotifications !== false && !emailOptions.skipInApp) {
-                const notification = await Notification.createNotification(userObj._id, title, message, 'security');
+                const notification = await Notification.createNotification(userObj._id, title, message, 'security', metadata);
                 // Emit via Socket for real-time
                 console.log(`[NOTIFY DEBUG] Calling emitNotification for security: ${userObj._id}`);
                 emitNotification(userObj._id, notification);
