@@ -6,7 +6,7 @@ import {
 import api from '../../services/api';
 import { Button, StatusBadge, Modal, Card, CardContent } from '../../components/common';
 import { DashboardSkeleton, TableSkeleton } from '../../components/admin/AdminSkeletons';
-import { formatCurrency, formatDateTime } from '../../utils/cn';
+import { formatCurrency, formatDateTime, cn } from '../../utils/cn';
 import { exportToCSV } from '../../utils/export';
 import { toast } from 'react-toastify';
 import { socketService } from '../../services/socket';
@@ -1195,38 +1195,35 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Decision Panel */}
-                        <div className="pt-8 border-t border-slate-100 space-y-6">
-                            <div className="space-y-2">
-                                <h4 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Verification Decision</h4>
-                                <p className="text-[13px] text-slate-500">Provide notes for approval or a specific reason if rejecting the application.</p>
-                            </div>
+                        <div className="space-y-2">
+                            <h4 className="text-[11px] font-bold text-slate-900 uppercase tracking-widest">Verification Decision</h4>
+                            <p className="text-[13px] text-slate-500">Provide notes for approval or a specific reason if rejecting the application.</p>
+                        </div>
 
-                            <textarea
-                                className="w-full h-28 p-4 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400 resize-none font-inter leading-relaxed"
-                                placeholder="Enter your assessment or rejection reason..."
-                                value={kycRejectionReason}
-                                onChange={(e) => setKYCRejectionReason(e.target.value)}
-                            />
+                        <textarea
+                            className="w-full h-28 p-4 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:text-slate-400 resize-none font-inter leading-relaxed"
+                            placeholder="Enter your assessment or rejection reason..."
+                            value={kycRejectionReason}
+                            onChange={(e) => setKYCRejectionReason(e.target.value)}
+                        />
 
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <Button
-                                    className="flex-[2] h-12 text-[15px] font-semibold tracking-tight shadow-sm"
-                                    variant="primary"
-                                    isLoading={verifyingKYC}
-                                    onClick={() => handleVerifyKYC(selectedKYC._id, 'approve')}
-                                >
-                                    Approve Verification
-                                </Button>
-                                <Button
-                                    className="flex-1 h-12 text-[15px] font-semibold tracking-tight shadow-none border-slate-200"
-                                    variant="secondary"
-                                    isLoading={verifyingKYC}
-                                    onClick={() => handleVerifyKYC(selectedKYC._id, 'reject')}
-                                >
-                                    Reject Submission
-                                </Button>
-                            </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <Button
+                                className="flex-[2] h-12 text-[15px] font-semibold tracking-tight shadow-sm"
+                                variant="primary"
+                                isLoading={verifyingKYC}
+                                onClick={() => handleVerifyKYC(selectedKYC._id, 'approve')}
+                            >
+                                Approve Verification
+                            </Button>
+                            <Button
+                                className="flex-1 h-12 text-[15px] font-semibold tracking-tight shadow-none border-slate-200"
+                                variant="secondary"
+                                isLoading={verifyingKYC}
+                                onClick={() => handleVerifyKYC(selectedKYC._id, 'reject')}
+                            >
+                                Reject Submission
+                            </Button>
                         </div>
                     </div>
                 </Modal>
@@ -1277,51 +1274,54 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </Modal>
-            )}
+            )
+            }
 
-            {selectedUserForSuspension && (
-                <Modal isOpen={true} onClose={() => setSelectedUserForSuspension(null)} title="Suspend User" size="md">
-                    <div className="space-y-4">
-                        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                            <p className="text-sm font-medium text-red-600">This will suspend the user's account</p>
-                            <p className="text-xs text-red-600/70 mt-0.5">The user will be notified via email and will not be able to access the platform.</p>
-                        </div>
+            {
+                selectedUserForSuspension && (
+                    <Modal isOpen={true} onClose={() => setSelectedUserForSuspension(null)} title="Suspend User" size="md">
+                        <div className="space-y-4">
+                            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                <p className="text-sm font-medium text-red-600">This will suspend the user's account</p>
+                                <p className="text-xs text-red-600/70 mt-0.5">The user will be notified via email and will not be able to access the platform.</p>
+                            </div>
 
-                        <div>
-                            <label className="text-xs font-medium text-slate-500 uppercase">User</label>
-                            <p className="text-sm font-medium text-slate-900 mt-1">{selectedUserForSuspension.email}</p>
-                        </div>
+                            <div>
+                                <label className="text-xs font-medium text-slate-500 uppercase">User</label>
+                                <p className="text-sm font-medium text-slate-900 mt-1">{selectedUserForSuspension.email}</p>
+                            </div>
 
-                        <div>
-                            <label className="block text-xs font-medium text-slate-500 uppercase mb-2">Reason for Suspension</label>
-                            <textarea
-                                value={suspensionReason}
-                                onChange={(e) => setSuspensionReason(e.target.value)}
-                                placeholder="Please provide a detailed reason for suspension..."
-                                className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
-                            />
-                        </div>
+                            <div>
+                                <label className="block text-xs font-medium text-slate-500 uppercase mb-2">Reason for Suspension</label>
+                                <textarea
+                                    value={suspensionReason}
+                                    onChange={(e) => setSuspensionReason(e.target.value)}
+                                    placeholder="Please provide a detailed reason for suspension..."
+                                    className="w-full h-32 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                                />
+                            </div>
 
-                        <div className="flex justify-end gap-3 pt-2">
-                            <Button
-                                variant="secondary"
-                                onClick={() => setSelectedUserForSuspension(null)}
-                                disabled={suspendingUser}
-                            >
-                                Cancel
-                            </Button>
-                            <Button
-                                variant="danger"
-                                onClick={confirmSuspension}
-                                isLoading={suspendingUser}
-                                disabled={suspendingUser || !suspensionReason.trim()}
-                            >
-                                Suspend User
-                            </Button>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <Button
+                                    variant="secondary"
+                                    onClick={() => setSelectedUserForSuspension(null)}
+                                    disabled={suspendingUser}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="danger"
+                                    onClick={confirmSuspension}
+                                    isLoading={suspendingUser}
+                                    disabled={suspendingUser || !suspensionReason.trim()}
+                                >
+                                    Suspend User
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                </Modal>
-            )}
+                    </Modal>
+                )
+            }
         </>
     );
 };
