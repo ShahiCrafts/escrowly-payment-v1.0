@@ -62,7 +62,7 @@ const uploadMultiple = multer({
     fileSize: 10 * 1024 * 1024,
     files: 5
   }
-}).array('files', 5);
+}).array('attachments', 5);
 
 const uploadKYC = multer({
   storage: attachmentStorage,
