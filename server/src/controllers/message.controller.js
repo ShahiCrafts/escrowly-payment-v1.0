@@ -5,17 +5,10 @@ const { emitMessage } = require('../socket');
 
 const getMessages = async (req, res) => {
   try {
-    const transaction = await Transaction.findById(req.params.transactionId);
+    const { transaction, isBuyer, isSeller } = req;
+    const isAdmin = req.user.role === 'admin';
 
-    if (!transaction) {
-      return res.status(404).json({ message: 'Transaction not found' });
-    }
-
-    const userId = req.user._id.toString();
-    const isBuyer = transaction.buyer.toString() === userId;
-    const isSeller = transaction.seller && transaction.seller.toString() === userId;
-
-    if (!isBuyer && !isSeller && req.user.role !== 'admin') {
+    if (!isBuyer && !isSeller && !isAdmin) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -35,21 +28,7 @@ const sendMessage = async (req, res) => {
     console.log('Backend: req.body:', req.body);
     console.log('Backend: req.files:', req.files);
 
-    const transaction = await Transaction.findById(req.params.transactionId);
-
-    if (!transaction) {
-      console.log('Backend: Transaction not found');
-      return res.status(404).json({ message: 'Transaction not found' });
-    }
-
-    const userId = req.user._id.toString();
-    const isBuyer = transaction.buyer.toString() === userId;
-    const isSeller = transaction.seller && transaction.seller.toString() === userId;
-
-    if (!isBuyer && !isSeller) {
-      console.log('Backend: Access denied for user:', userId);
-      return res.status(403).json({ message: 'Access denied' });
-    }
+    const { transaction, isBuyer, isSeller } = req;
 
     const { content, isPoc, pocTitle } = req.body;
     const attachments = [];
@@ -86,7 +65,9 @@ const sendMessage = async (req, res) => {
     console.log('Backend: Message created successfully:', message._id);
 
     // Create notification for recipient
-    const recipientId = isBuyer ? transaction.seller : transaction.buyer;
+    const recipientId = isBuyer
+      ? (transaction.seller._id || transaction.seller)
+      : (transaction.buyer._id || transaction.buyer);
     console.log(`[MESSAGE DEBUG] Recipient identified: ${recipientId}. Sender: ${req.user._id}`);
     if (recipientId) {
       // 1. Send real-time message via socket for chat update
@@ -95,7 +76,7 @@ const sendMessage = async (req, res) => {
 
       // 2. Send generic notification (toast/email)
       console.log(`[MESSAGE DEBUG] Triggering notifyMessage via notificationService`);
-      await notificationService.notifyMessage(
+      notificationService.notifyMessage(
         recipientId,
         req.user.profile?.firstName || 'User',
         transaction.title,
@@ -103,7 +84,7 @@ const sendMessage = async (req, res) => {
           transactionId: transaction._id,
           actionUrl: `/dashboard/transaction/${transaction._id}`
         }
-      );
+      ).catch(err => console.error('[NOTIFY ERROR] notifyMessage failed:', err));
     }
 
     res.status(201).json({ message });
