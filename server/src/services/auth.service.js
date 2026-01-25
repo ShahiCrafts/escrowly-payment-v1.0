@@ -1,11 +1,12 @@
 const https = require('https');
-const { User, RefreshToken, AuditLog, SystemSetting, Transaction, Notification, Message, SuspensionAppeal } = require('../models');
+const { User, RefreshToken, AuditLog, SystemSetting, Transaction, Notification, Message, SuspensionAppeal, UserDevice } = require('../models');
 const { generateAccessToken, generateRefreshToken } = require('../utils/tokens');
 const { generateSecureToken, generateOTP, hashSHA256 } = require('../utils/crypto');
 const { encrypt } = require('../utils/crypto');
 const emailService = require('./email.service');
 const notificationService = require('./notification.service');
 const mfaService = require('./mfa.service');
+const { parseUserAgent } = require('../utils/device');
 const logger = require('../utils/logger');
 
 const checkPasswordBreached = async (password) => {
@@ -161,22 +162,34 @@ const login = async (email, password, mfaToken, ip, userAgent) => {
     };
   }
 
-  await user.resetFailedAttempts();
+  // DEVICE TRACKING: Identify and track trusted devices
+  const [device, isNewDevice] = await Promise.all([
+    UserDevice.findOneAndUpdate(
+      { user: user._id, ipAddress: ip, userAgent },
+      { lastUsedAt: new Date() },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).lean().then(d => [d, !d]),
+    // Check if this specific combination already existed
+    UserDevice.exists({ user: user._id, ipAddress: ip, userAgent }).then(exists => !exists)
+  ]);
 
-  const isNewIp = user.security.lastLoginIp && user.security.lastLoginIp !== ip;
-
-  user.security.lastLogin = new Date();
-  user.security.lastLoginIp = ip;
-  await user.save();
-
-  if (isNewIp) {
-    await notificationService.notifySecurity(user, 'New Login Detected', `A new login from IP ${ip} was detected.`, {
-      sendFn: 'sendNewLoginAlert',
-      args: [ip, userAgent]
-    });
+  if (isNewDevice) {
+    const deviceInfo = parseUserAgent(userAgent);
+    logger.info('New login device detected', { userId: user._id, ip, deviceInfo });
+    await notificationService.notifySecurity(
+      user,
+      'Security Alert: New Device Login',
+      `A new login was detected from ${deviceInfo} (IP: ${ip}). If this wasn't you, please secure your account immediately.`,
+      {
+        isCritical: true,
+        sendFn: 'sendNewLoginAlert',
+        args: [ip, deviceInfo] // Using clean deviceInfo instead of raw UA in email too
+      },
+      { ip, device: deviceInfo }
+    );
   }
 
-  await AuditLog.logAuth('user_login', user._id, 'success', { ip, get: () => userAgent }, {});
+  await AuditLog.logAuth('user_login', user._id, 'success', { ip, get: () => userAgent }, { deviceId: device?._id });
 
   const accessToken = generateAccessToken(user._id, sessionTimeout);
   const refreshToken = generateRefreshToken(user._id);
@@ -191,14 +204,35 @@ const login = async (email, password, mfaToken, ip, userAgent) => {
 };
 
 const refreshAccessToken = async (refreshToken, ip, userAgent) => {
-  const tokenDoc = await RefreshToken.findByToken(refreshToken);
+  const tokenHash = RefreshToken.hashToken(refreshToken);
+  const tokenDoc = await RefreshToken.findOne({ tokenHash });
 
-  if (!tokenDoc || !tokenDoc.isActive) {
-    if (tokenDoc && tokenDoc.revokedAt) {
-      await RefreshToken.revokeAllUserTokens(tokenDoc.user, ip);
-      logger.warn('Refresh token reuse detected', { userId: tokenDoc.user });
-    }
+  if (!tokenDoc) {
     throw new Error('Invalid refresh token');
+  }
+
+  // REUSE DETECTION: If an already revoked token is used, it's a sign of a breach
+  if (tokenDoc.revokedAt || tokenDoc.isExpired) {
+    if (tokenDoc.revokedAt) {
+      // Immediate logout of all devices for this user as a safety precaution
+      await RefreshToken.revokeAllUserTokens(tokenDoc.user, ip);
+      logger.warn('REFRESH TOKEN REUSE DETECTED! All sessions revoked.', {
+        userId: tokenDoc.user,
+        ip,
+        userAgent
+      });
+      await notificationService.notifySecurity(
+        { _id: tokenDoc.user },
+        'Security Alert: Unauthorized Session Attempt',
+        'A previously used session token was attempted. For your security, we have logged you out of all devices. Please log in again and change your password.',
+        {
+          isCritical: true,
+          sendFn: 'sendSecurityBreachAlert',
+          args: []
+        }
+      );
+    }
+    throw new Error('Refresh token invalid or expired');
   }
 
   const user = await User.findById(tokenDoc.user);
@@ -206,18 +240,13 @@ const refreshAccessToken = async (refreshToken, ip, userAgent) => {
     throw new Error('User not found or suspended');
   }
 
-  tokenDoc.revokedAt = new Date();
-  tokenDoc.revokedByIp = ip;
-  await tokenDoc.save();
-
   const setting = await SystemSetting.findOne({ key: 'sessionTimeoutMinutes' });
   const sessionTimeout = setting?.value || 15;
   const newAccessToken = generateAccessToken(user._id, sessionTimeout);
   const newRefreshToken = generateRefreshToken(user._id);
 
-  const newTokenDoc = await RefreshToken.createToken(user, newRefreshToken, ip, userAgent);
-  tokenDoc.replacedByTokenHash = newTokenDoc.tokenHash;
-  await tokenDoc.save();
+  // Rotate token: create new one and mark current as replaced
+  await RefreshToken.createToken(user, newRefreshToken, ip, userAgent, tokenHash);
 
   return {
     token: newAccessToken,
