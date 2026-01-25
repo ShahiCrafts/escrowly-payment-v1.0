@@ -3,12 +3,12 @@ import { cn } from '../../utils/cn';
 
 const buttonVariants = {
     variant: {
-        primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500',
-        secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:ring-blue-500',
-        danger: 'bg-rose-500 text-white hover:bg-rose-600 focus:ring-rose-500',
-        success: 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500',
-        ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:ring-slate-500',
-        link: 'bg-transparent text-blue-600 hover:text-blue-700 underline-offset-4 hover:underline focus:ring-blue-500'
+        primary: 'bg-blue-600 text-white hover:bg-blue-700',
+        secondary: 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300',
+        danger: 'bg-rose-500 text-white hover:bg-rose-600',
+        success: 'bg-emerald-500 text-white hover:bg-emerald-600',
+        ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900',
+        link: 'bg-transparent text-blue-600 hover:text-blue-700 underline-offset-4 hover:underline'
     },
     size: {
         sm: 'px-3 py-1.5 text-sm',
@@ -35,7 +35,7 @@ const Button = forwardRef(({
             disabled={disabled || isLoading}
             className={cn(
                 'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors duration-200',
-                'focus:outline-none focus:ring-2 focus:ring-offset-2',
+                'focus:outline-none',
                 'disabled:opacity-50 disabled:cursor-not-allowed',
                 buttonVariants.variant[variant],
                 buttonVariants.size[size],
