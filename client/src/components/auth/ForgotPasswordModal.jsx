@@ -36,54 +36,81 @@ const ForgotPasswordModal = ({ isOpen, onClose }) => {
 
     if (submitted) {
         return (
-            <Modal isOpen={isOpen} onClose={handleClose} showCloseButton={false} size="sm">
-                <div className="text-center py-4">
-                    <div className="mx-auto w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-5">
-                        <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <Modal isOpen={isOpen} onClose={handleClose} title="Email Sent" size="sm">
+                <div className="space-y-6">
+                    <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                        <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                         </svg>
                     </div>
-                    <h2 className="text-xl font-semibold text-neutral-900 tracking-tight mb-2">Check your email</h2>
-                    <p className="text-[14px] text-neutral-500 mb-6 leading-relaxed">
-                        If an account exists with that email, we've sent password reset instructions to your inbox.
-                    </p>
-                    <Button onClick={handleClose} variant="secondary" className="w-full h-11 text-[15px] font-medium">
-                        Close
-                    </Button>
+
+                    <div className="text-center space-y-2">
+                        <h3 className="text-lg font-bold text-slate-900">Check your email</h3>
+                        <p className="text-sm text-slate-600 leading-relaxed">
+                            If an account exists with that email, we've sent password reset instructions to your inbox.
+                        </p>
+                        <p className="text-xs text-slate-500">
+                            Didn't receive it? Check your spam folder or try again.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 pt-2">
+                        <Button
+                            onClick={handleClose}
+                            className="w-full justify-center bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl font-bold"
+                        >
+                            Done
+                        </Button>
+                    </div>
                 </div>
             </Modal>
         );
     }
 
     return (
-        <Modal isOpen={isOpen} onClose={handleClose} showCloseButton={false} size="sm">
-            <div className="py-2">
-                {/* Header */}
-                <div className="text-center mb-6">
-                    <h2 className="text-xl font-semibold text-neutral-900 tracking-tight">Reset password</h2>
-                    <p className="text-neutral-500 mt-1.5 text-[14px]">Enter your email to receive a reset link</p>
+        <Modal isOpen={isOpen} onClose={handleClose} title="Reset Password" size="sm">
+            <div className="space-y-4">
+                <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto">
+                    <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    </svg>
                 </div>
 
-                {/* Form */}
+                <div className="text-center space-y-2">
+                    <h3 className="text-lg font-bold text-slate-900">Forgot your password?</h3>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                        Enter your email address and we'll send you a link to reset your password.
+                    </p>
+                </div>
+
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                     <div>
-                        <label className="block text-[13px] font-medium text-neutral-600 mb-1.5">Email</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1.5">Email address</label>
                         <input
                             type="email"
                             placeholder="name@example.com"
                             autoComplete="email"
-                            className={`w-full h-11 px-3.5 border rounded-lg text-[15px] placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors.email ? 'border-red-300' : 'border-neutral-200'}`}
+                            className={`w-full h-11 px-3.5 border rounded-xl text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all ${errors.email ? 'border-red-300' : 'border-slate-200'}`}
                             {...register('email')}
                         />
                         {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
                     </div>
 
                     <div className="flex gap-3 pt-2">
-                        <Button type="button" onClick={handleClose} variant="secondary" className="flex-1 h-11 text-[15px] font-medium">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handleClose}
+                            className="flex-1 justify-center h-11 rounded-xl font-bold"
+                        >
                             Cancel
                         </Button>
-                        <Button type="submit" isLoading={isSubmitting} className="flex-1 h-11 text-[15px] font-medium">
-                            Send link
+                        <Button
+                            type="submit"
+                            isLoading={isSubmitting}
+                            className="flex-1 justify-center bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl font-bold"
+                        >
+                            Send Reset Link
                         </Button>
                     </div>
                 </form>
