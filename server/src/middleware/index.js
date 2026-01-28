@@ -1,6 +1,6 @@
 const { authenticate, optionalAuth } = require('./authenticate');
 const { authorize, isAdmin, isTransactionParty } = require('./authorize');
-const { generalLimiter, authLimiter, strictAuthLimiter, passwordResetLimiter, apiLimiter } = require('./rateLimiter');
+const { generalLimiter, authLimiter, loginLimiter, passwordResetLimiter, apiLimiter } = require('./rateLimiter');
 const { helmetConfig, sanitizeInput, preventParameterPollution, xssClean, securityHeaders, csrfProtection } = require('./security');
 const validators = require('./validators');
 const { uploadSingle, uploadMultiple, uploadKYC, handleUploadError } = require('./fileUpload');
@@ -16,7 +16,7 @@ module.exports = {
   isTransactionParty,
   generalLimiter,
   authLimiter,
-  strictAuthLimiter,
+  loginLimiter,
   passwordResetLimiter,
   apiLimiter,
   helmetConfig,
