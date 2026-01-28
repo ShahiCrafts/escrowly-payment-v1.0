@@ -149,8 +149,16 @@ const uploadProfilePicture = async (req, res) => {
 
     res.json({ user: user.toJSON() });
   } catch (error) {
-    console.error('Backend: uploadProfilePicture error:', error);
-    res.status(500).json({ message: error.message });
+    console.error(`Security Alert: uploadProfilePicture error for user ${req.user?._id}:`, error);
+
+    // Cleanup: If a file was uploaded but the db update failed, delete it
+    if (req.file && req.file.filename) {
+      cloudinary.uploader.destroy(req.file.filename).catch(err =>
+        console.error('Cleanup failed after error:', err)
+      );
+    }
+
+    res.status(500).json({ message: 'Error uploading profile picture. Please try again.' });
   }
 };
 
@@ -247,7 +255,20 @@ const submitAppeal = async (req, res) => {
 
     res.status(201).json({ appeal });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(`Security Alert: submitAppeal error for user ${req.user?._id}:`, error);
+
+    // Cleanup uploaded files on failure
+    if (req.files && req.files.length > 0) {
+      req.files.forEach(file => {
+        if (file.filename) {
+          cloudinary.uploader.destroy(file.filename).catch(err =>
+            console.error('Cleanup failed after error:', err)
+          );
+        }
+      });
+    }
+
+    res.status(500).json({ message: 'Error submitting appeal. Please try again.' });
   }
 };
 
@@ -399,7 +420,26 @@ const submitKYC = async (req, res) => {
 
     res.json({ user: user.toJSON(), message: 'KYC submitted successfully. Verification is now in progress.' });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error(`Security Alert: submitKYC error for user ${req.user?._id}:`, error);
+
+    // Robust cleanup of sensitive KYC documents on failure
+    if (req.files) {
+      const filesToDestroy = [
+        ...(req.files.idFront || []),
+        ...(req.files.idBack || []),
+        ...(req.files.selfie || [])
+      ];
+
+      for (const file of filesToDestroy) {
+        if (file.filename) {
+          cloudinary.uploader.destroy(file.filename).catch(err =>
+            console.error('KYC Document Cleanup failed:', err)
+          );
+        }
+      }
+    }
+
+    res.status(500).json({ message: 'Error submitting KYC. Please try again.' });
   }
 };
 
