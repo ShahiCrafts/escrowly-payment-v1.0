@@ -65,6 +65,7 @@ const userSchema = new mongoose.Schema({
         passwordChangedAt: Date,
         passwordExpiresAt: Date,
         mustChangePassword: { type: Boolean, default: false },
+        tokenVersion: { type: Number, default: 0 },
         passwordHistory: [String]
     },
     stripe: {
@@ -219,14 +220,11 @@ const userSchema = new mongoose.Schema({
 userSchema.pre('save', async function (next) {
     if (this.isModified('password') && this.password) {
         const rounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
-
-        // Capture old hash before hashing new one
         const oldUser = await this.constructor.findById(this._id).select('password');
         if (oldUser && oldUser.password) {
             this.security.passwordHistory.unshift(oldUser.password);
             this.security.passwordHistory = this.security.passwordHistory.slice(0, 5);
         }
-
         this.password = await bcrypt.hash(this.password, rounds);
         this.security.passwordChangedAt = new Date();
         this.security.passwordExpiresAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
@@ -275,10 +273,10 @@ userSchema.methods.isPasswordExpired = function () {
     return new Date() > this.security.passwordExpiresAt;
 };
 
-userSchema.methods.incrementFailedAttempts = async function () {
+userSchema.methods.incrementFailedAttempts = async function (maxAttempts = 5, lockoutMinutes = 5) {
     this.security.failedLoginAttempts += 1;
-    if (this.security.failedLoginAttempts >= 5) {
-        this.security.lockoutUntil = new Date(Date.now() + 5 * 60 * 1000);
+    if (this.security.failedLoginAttempts >= maxAttempts) {
+        this.security.lockoutUntil = new Date(Date.now() + lockoutMinutes * 60 * 1000);
     }
     await this.save();
 };
