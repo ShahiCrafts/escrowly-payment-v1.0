@@ -14,6 +14,7 @@ import {
     HiOutlineXCircle,
     HiCheck
 } from 'react-icons/hi2';
+import { LuCopy, LuDownload, LuRefreshCw } from 'react-icons/lu';
 import { toast } from 'react-toastify';
 import { socketService } from '../../services/socket';
 import { cn } from '../../utils/cn';
@@ -174,6 +175,7 @@ const Settings = () => {
         enableMFA,
         disableMFA,
         getBackupCodes,
+        regenerateBackupCodes,
         resendVerification,
         refreshUser,
         logoutAll,
@@ -219,6 +221,7 @@ const Settings = () => {
     const [showViewBackupCodesModal, setShowViewBackupCodesModal] = useState(false);
     const [viewBackupCodesPassword, setViewBackupCodesPassword] = useState('');
     const [loadingBackupCodes, setLoadingBackupCodes] = useState(false);
+    const [regeneratingCodes, setRegeneratingCodes] = useState(false);
 
     // UI State
     const [stripeStatus, setStripeStatus] = useState(null);
@@ -413,6 +416,19 @@ const Settings = () => {
             toast.error(error.response?.data?.message || 'Failed to retrieve backup codes');
         } finally {
             setLoadingBackupCodes(false);
+        }
+    };
+
+    const handleRegenerateBackupCodes = async () => {
+        setRegeneratingCodes(true);
+        try {
+            const data = await regenerateBackupCodes(viewBackupCodesPassword || 'regenerate');
+            setBackupCodes(data.backupCodes);
+            toast.success('New backup codes generated');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to regenerate codes');
+        } finally {
+            setRegeneratingCodes(false);
         }
     };
 
@@ -974,42 +990,87 @@ const Settings = () => {
             </div >
 
             {/* Modals */}
-            < Modal isOpen={showMfaModal} onClose={() => setShowMfaModal(false)} title="Setup Two-Factor Authentication" >
+            <Modal isOpen={showMfaModal} onClose={() => setShowMfaModal(false)} title="Setup authenticator app" size="md">
                 <div className="space-y-6">
-                    <div className="text-center">
-                        <p className="text-sm text-slate-500 mb-4">
-                            Scan this QR code with your authenticator app (like Google Authenticator or Authy).
-                        </p>
-                        <div className="flex justify-center mb-4">
-                            <div className="p-2 bg-white rounded-xl border border-slate-200 shadow-sm">
-                                <img src={qrCode} alt="MFA QR Code" className="w-48 h-48" />
+                    {/* QR Section */}
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                                </svg>
                             </div>
+                            <h3 className="text-sm font-semibold text-slate-900">Scan QR code</h3>
                         </div>
-                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 text-center">
-                            <p className="text-xs text-slate-500 mb-1">Or enter this code manually:</p>
-                            <p className="font-mono text-sm text-slate-900 break-all select-all">{secret}</p>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            Scan the QR code below or manually enter the secret key into your authenticator app.
+                        </p>
+
+                        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex gap-5 items-center">
+                            <div className="bg-white p-1.5 rounded-lg border border-slate-200 flex-shrink-0">
+                                <img src={qrCode} alt="MFA QR Code" className="w-28 h-28" />
+                            </div>
+                            <div className="flex-1 min-w-0 space-y-2.5">
+                                <p className="text-xs font-medium text-slate-500">Can't scan? Enter code manually:</p>
+                                <div className="font-mono text-xs font-medium text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 break-all select-all">
+                                    {secret}
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(secret);
+                                        toast.success('Copied to clipboard');
+                                    }}
+                                    className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300"
+                                >
+                                    <LuCopy className="w-3.5 h-3.5" />
+                                    Copy code
+                                </button>
+                            </div>
                         </div>
                     </div>
 
+                    {/* Verification Code */}
                     <div className="space-y-3">
-                        <label className="block text-sm font-medium text-slate-700">6-Digit Verification Code</label>
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h3 className="text-sm font-semibold text-slate-900">Enter verification code</h3>
+                        </div>
+                        <p className="text-sm text-slate-500">
+                            Enter the 6-digit code on your authenticator app.
+                        </p>
                         <input
                             type="text"
-                            placeholder="000 000"
+                            inputMode="numeric"
+                            placeholder="000000"
                             value={mfaToken}
                             onChange={(e) => setMfaToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                            className="w-full h-12 px-4 bg-white border border-slate-300 rounded-xl text-center text-2xl tracking-[0.4em] font-mono text-slate-900 focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all placeholder:tracking-normal placeholder:text-slate-300"
+                            className="w-full h-12 px-4 bg-white border-2 border-slate-200 rounded-xl text-center text-2xl tracking-[0.4em] font-mono font-bold text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all placeholder:tracking-normal placeholder:text-slate-300 placeholder:font-normal"
                         />
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-3 pt-2">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setShowMfaModal(false)}
+                            className="flex-1 h-11 rounded-xl font-bold justify-center"
+                        >
+                            Cancel
+                        </Button>
                         <Button
                             onClick={handleEnableMFA}
                             disabled={mfaToken.length !== 6}
-                            className="w-full h-12"
+                            className="flex-1 h-11 rounded-xl font-bold justify-center bg-blue-600 hover:bg-blue-700 text-white"
                         >
-                            Verify & Enable
+                            Verify
                         </Button>
                     </div>
                 </div>
-            </Modal >
+            </Modal>
 
             <Modal isOpen={showViewBackupCodesModal} onClose={() => { setShowViewBackupCodesModal(false); setViewBackupCodesPassword(''); }} title="View Backup Codes">
                 <div className="space-y-4">
@@ -1062,25 +1123,83 @@ const Settings = () => {
                 </div>
             </Modal>
 
-            <Modal isOpen={showBackupCodes} onClose={() => setShowBackupCodes(false)} title="Backup Codes">
-                <div className="space-y-4">
-                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3">
-                        <svg className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <Modal isOpen={showBackupCodes} onClose={() => setShowBackupCodes(false)} title="Backup Codes" size="md">
+                <div className="space-y-5">
+                    <div className="w-14 h-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto">
+                        <svg className="w-7 h-7 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                         </svg>
-                        <p className="text-sm text-amber-700 font-medium">
-                            Save these codes securely. Each code can only be used once if you lose your MFA device.
+                    </div>
+
+                    <div className="text-center space-y-1.5">
+                        <h3 className="text-lg font-bold text-slate-900">Your Recovery Codes</h3>
+                        <p className="text-sm text-slate-500 leading-relaxed">
+                            Each code can only be used once. Store them somewhere safe.
                         </p>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        {backupCodes.map((code, index) => (
-                            <div key={index} className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-center font-mono text-sm text-slate-900 tracking-wider shadow-sm">
-                                {code.code}
-                            </div>
-                        ))}
+
+                    <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                        <div className="grid grid-cols-2 gap-2.5 font-mono text-sm">
+                            {backupCodes.map((code, index) => (
+                                <button
+                                    key={index}
+                                    className="bg-white border border-slate-200 py-2.5 rounded-lg text-center text-slate-900 tracking-wider hover:bg-slate-100 hover:border-slate-300 transition-all cursor-pointer active:scale-95"
+                                    onClick={() => {
+                                        navigator.clipboard.writeText(code.code);
+                                        toast.success('Code copied');
+                                    }}
+                                    title="Click to copy"
+                                >
+                                    {code.code}
+                                </button>
+                            ))}
+                        </div>
                     </div>
-                    <Button onClick={() => setShowBackupCodes(false)} className="w-full h-11">
-                        I've Safely Stored These Codes
+
+                    <div className="flex gap-2.5">
+                        <button
+                            onClick={() => {
+                                const text = backupCodes.map(c => c.code).join('\n');
+                                navigator.clipboard.writeText(text);
+                                toast.success('All codes copied to clipboard');
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-2 h-10 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
+                        >
+                            <LuCopy className="w-4 h-4" />
+                            Copy All
+                        </button>
+                        <button
+                            onClick={() => {
+                                const text = `Escrowly Backup Codes\n${'='.repeat(25)}\n\n${backupCodes.map((c, i) => `${i + 1}. ${c.code}`).join('\n')}\n\nKeep these codes safe. Each code can only be used once.`;
+                                const blob = new Blob([text], { type: 'text/plain' });
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = 'escrowly-backup-codes.txt';
+                                a.click();
+                                URL.revokeObjectURL(url);
+                                toast.success('Backup codes downloaded');
+                            }}
+                            className="flex-1 inline-flex items-center justify-center gap-2 h-10 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
+                        >
+                            <LuDownload className="w-4 h-4" />
+                            Download
+                        </button>
+                        <button
+                            onClick={handleRegenerateBackupCodes}
+                            disabled={regeneratingCodes}
+                            title="Generate new codes (invalidates old ones)"
+                            className="inline-flex items-center justify-center w-10 h-10 text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50"
+                        >
+                            <LuRefreshCw className={cn("w-4 h-4", regeneratingCodes && "animate-spin")} />
+                        </button>
+                    </div>
+
+                    <Button
+                        onClick={() => setShowBackupCodes(false)}
+                        className="w-full justify-center bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl font-bold"
+                    >
+                        I've Saved My Codes
                     </Button>
                 </div>
             </Modal>
