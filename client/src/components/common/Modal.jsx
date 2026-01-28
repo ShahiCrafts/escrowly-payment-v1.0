@@ -71,9 +71,11 @@ const Modal = ({
                         )}
                     >
                         {(title || showCloseButton) && (
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-white">
-                                {title && (
+                            <div className={cn("flex items-center justify-between px-5 bg-white", title ? "py-4" : "pt-2")}>
+                                {title ? (
                                     <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+                                ) : (
+                                    <span />
                                 )}
                                 {showCloseButton && (
                                     <button
