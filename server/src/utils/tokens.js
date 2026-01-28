@@ -7,8 +7,20 @@ const DEV_REFRESH_SECRET = 'dev-refresh-secret-key-min-32-chars!';
 const getSecrets = () => {
   const parseKey = (key) => {
     if (!key) return null;
-    // Strip surrounding quotes and replace literal \n with real newlines
-    let clean = key.trim().replace(/^["']|["']$/g, '').replace(/\\n/g, '\n');
+
+    // 1. Remove surrounding quotes (common in .env)
+    let clean = key.trim().replace(/^["']|["']$/g, '');
+
+    // 2. Handle literal "\n" strings (often added when keys are copied into .env)
+    clean = clean.replace(/\\n/g, '\n');
+
+    // 3. If it doesn't have headers, it might be a raw base64 string or mangled
+    if (!clean.includes('-----BEGIN')) {
+      // If it looks like it might be a multi-line key that lost its newlines, 
+      // but still has the header text in it (unlikely with .trim() and .replace above but possible)
+      return null;
+    }
+
     return clean;
   };
 
@@ -41,13 +53,13 @@ const getSecrets = () => {
   }
 };
 
-const generateAccessToken = (userId, expiresIn) => {
+const generateAccessToken = (userId, tokenVersion, expiresIn) => {
   const secrets = getSecrets();
   const algorithm = secrets.isRS256 ? 'RS256' : 'HS256';
   const key = secrets.isRS256 ? secrets.privateKey : secrets.accessSecret;
 
   return jwt.sign(
-    { userId },
+    { userId, tokenVersion },
     key,
     {
       algorithm,
