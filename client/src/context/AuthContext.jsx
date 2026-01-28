@@ -39,6 +39,47 @@ export const AuthProvider = ({ children }) => {
         initAuth();
     }, [fetchUser]);
 
+    useEffect(() => {
+        let idleTimer;
+        const TIMEOUT_DURATION = 2 * 60 * 1000; // 2 minutes
+
+        const resetTimer = () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            if (user) {
+                idleTimer = setTimeout(() => {
+                    console.log('User idle for 2 minutes. Logging out...');
+                    logout();
+                }, TIMEOUT_DURATION);
+            }
+        };
+
+        // Events to monitor for activity
+        const events = [
+            'mousedown',
+            'mousemove',
+            'keypress',
+            'scroll',
+            'touchstart'
+        ];
+
+        if (user) {
+            // Initial timer setup
+            resetTimer();
+
+            // Add event listeners
+            events.forEach(event => {
+                document.addEventListener(event, resetTimer);
+            });
+        }
+
+        return () => {
+            if (idleTimer) clearTimeout(idleTimer);
+            events.forEach(event => {
+                document.removeEventListener(event, resetTimer);
+            });
+        };
+    }, [user]);
+
     const login = async (credentials) => {
         const response = await api.post('/auth/login', credentials);
 
