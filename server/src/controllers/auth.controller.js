@@ -6,7 +6,9 @@ const setRefreshTokenCookie = (res, refreshToken) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    signed: true,
+    path: '/api/auth/refresh'
   });
 };
 
@@ -68,7 +70,7 @@ const login = async (req, res) => {
 
 const refresh = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.signedCookies.refreshToken;
 
     if (!refreshToken) {
       return res.status(401).json({ message: 'Refresh token required' });
@@ -91,10 +93,10 @@ const refresh = async (req, res) => {
 
 const logout = async (req, res) => {
   try {
-    const refreshToken = req.cookies.refreshToken;
+    const refreshToken = req.signedCookies.refreshToken;
     await authService.logout(refreshToken, req.ip);
 
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -105,7 +107,7 @@ const logoutAll = async (req, res) => {
   try {
     await authService.logoutAll(req.user._id, req.ip);
 
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
     res.json({ message: 'Logged out from all devices' });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -184,7 +186,7 @@ const changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    const result = await authService.changePassword(
+    await authService.changePassword(
       req.user._id,
       currentPassword,
       newPassword,
@@ -192,7 +194,7 @@ const changePassword = async (req, res) => {
       req.get('user-agent')
     );
 
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -288,7 +290,7 @@ const deleteAccount = async (req, res) => {
       req.ip,
       req.get('user-agent')
     );
-    res.clearCookie('refreshToken');
+    res.clearCookie('refreshToken', { path: '/api/auth/refresh' });
     res.json(result);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -302,14 +304,17 @@ const googleCallback = async (req, res) => {
     const { generateAccessToken, generateRefreshToken } = require('../utils/tokens');
     const { RefreshToken } = require('../models');
 
-    const accessToken = generateAccessToken(user._id);
+    const accessToken = generateAccessToken(user._id, user.security.tokenVersion);
     const refreshToken = generateRefreshToken(user._id);
 
     await RefreshToken.createToken(user, refreshToken, req.ip, req.get('user-agent'));
 
     setRefreshTokenCookie(res, refreshToken);
 
-    res.redirect(`${process.env.CLIENT_URL}/auth/success?token=${accessToken}`);
+    // Instead of passing the access token in the URL, redirect to a landing page 
+    // that will fetch the token using the refresh cookie or a short-lived one-time code.
+    // Fixed: Redirect with a small message, and the client will use the refresh cookie to get a new access token.
+    res.redirect(`${process.env.CLIENT_URL}/auth/success`);
   } catch (error) {
     res.redirect(`${process.env.CLIENT_URL}/auth/login?error=oauth_failed`);
   }
