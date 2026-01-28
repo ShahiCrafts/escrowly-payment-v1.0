@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '../../context/AuthContext';
+import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../../components/common';
 import PasswordStrengthMeter from '../../components/common/PasswordStrengthMeter';
@@ -48,8 +49,18 @@ const Register = () => {
         if (isValid) setStep(step + 1);
     };
 
+    const { executeRecaptcha } = useGoogleReCaptcha();
+
     const onSubmit = async (data) => {
         try {
+            console.log('Registration submitted', data);
+            let captchaToken = '';
+            if (executeRecaptcha) {
+                console.log('Executing reCAPTCHA for registration...');
+                captchaToken = await executeRecaptcha('register');
+                console.log('reCAPTCHA Token generated:', captchaToken ? 'Yes' : 'No');
+            }
+
             const encoder = new TextEncoder();
             const idData = encoder.encode(data.nagariktaNumber);
             const hashBuffer = await window.crypto.subtle.digest('SHA-256', idData);
@@ -63,7 +74,8 @@ const Register = () => {
                 firstName: data.firstName,
                 lastName: data.lastName,
                 phone: data.phone,
-                nagariktaNumber: hashedID
+                nagariktaNumber: hashedID,
+                captchaToken
             });
             toast.success('Account created! Please verify your email to use escrow services.');
             navigate('/dashboard');
