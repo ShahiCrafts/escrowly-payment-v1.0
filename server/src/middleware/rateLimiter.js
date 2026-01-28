@@ -16,16 +16,21 @@ const generalLimiter = createRateLimiter(
   'Too many requests, please try again later'
 );
 
+const authWindowMin = parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MINUTES) || 5;
+const authMaxAttempts = parseInt(process.env.AUTH_RATE_LIMIT_MAX_ATTEMPTS) || 20;
+const loginWindowMin = parseInt(process.env.LOGIN_RATE_LIMIT_WINDOW_MINUTES) || 15;
+const loginMaxAttempts = parseInt(process.env.LOGIN_RATE_LIMIT_MAX_ATTEMPTS) || 10;
+
 const authLimiter = createRateLimiter(
-  15 * 60 * 1,
-  5,
-  'Too many authentication attempts, please try again later'
+  authWindowMin * 60 * 1000,
+  authMaxAttempts,
+  `Too many requests, please try again in ${authWindowMin} minutes`
 );
 
-const strictAuthLimiter = createRateLimiter(
-  60 * 60 * 1000,
-  3,
-  'Too many failed attempts, please try again in an hour'
+const loginLimiter = createRateLimiter(
+  loginWindowMin * 60 * 1000,
+  loginMaxAttempts,
+  `Too many login attempts from this IP, please try again in ${loginWindowMin} minutes`
 );
 
 const passwordResetLimiter = createRateLimiter(
@@ -43,7 +48,7 @@ const apiLimiter = createRateLimiter(
 module.exports = {
   generalLimiter,
   authLimiter,
-  strictAuthLimiter,
+  loginLimiter,
   passwordResetLimiter,
   apiLimiter
 };
