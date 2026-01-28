@@ -2,6 +2,7 @@ const helmet = require('helmet');
 const mongoSanitize = require('express-mongo-sanitize');
 const hpp = require('hpp');
 const csrf = require('csurf');
+const xss = require('xss');
 
 const helmetConfig = helmet({
   contentSecurityPolicy: {
@@ -52,12 +53,7 @@ const xssClean = (req, res, next) => {
 const sanitizeObject = (obj) => {
   for (const key in obj) {
     if (typeof obj[key] === 'string') {
-      obj[key] = obj[key]
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#x27;')
-        .replace(/\//g, '&#x2F;');
+      obj[key] = xss(obj[key]);
     } else if (typeof obj[key] === 'object' && obj[key] !== null) {
       sanitizeObject(obj[key]);
     }
@@ -77,7 +73,8 @@ const csrfProtection = csrf({
   cookie: {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
+    sameSite: 'strict',
+    signed: true
   },
   value: (req) => req.headers['x-csrf-token']
 });
