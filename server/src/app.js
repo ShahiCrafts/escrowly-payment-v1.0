@@ -24,6 +24,7 @@ const {
 const logger = require('./utils/logger');
 
 const app = express();
+// const LOCAL_IP = 'http://192.168.1.5:5173';
 
 app.set('trust proxy', 1);
 
@@ -37,11 +38,41 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token']
 }));
 
+// app.use(cors({
+//     origin: (origin, callback) => {
+//         // allow requests with no origin like mobile apps or curl
+//         if (!origin) return callback(null, true);
+
+//         const allowedOrigins = [
+//             'http://localhost:5173',
+//             'http://127.0.0.1:5173',
+//             'http://localhost:3000',
+//             'https://www.projecthubnepal.app',
+//             'https://projecthubnepal.app',
+//             LOCAL_IP
+//         ];
+
+//         // Allow all local network IPs dynamically
+//         if (origin.startsWith('http://172.26.') || origin.startsWith('http://192.168.')) {
+//             return callback(null, true);
+//         }
+
+//         if (allowedOrigins.includes(origin)) {
+//             return callback(null, true);
+//         } else {
+//             return callback(new Error('CORS not allowed for this origin'), false);
+//         }
+//     },
+//     credentials: true,
+//     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+//     allowedHeaders: ['Content-Type', 'Authorization', 'x-CSRF-token'],
+// }));
+
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
+app.use(cookieParser(process.env.COOKIE_SECRET));
 
 app.use(sanitizeInput);
 app.use(preventParameterPollution);
