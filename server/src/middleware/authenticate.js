@@ -19,6 +19,10 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ message: 'User not found' });
     }
 
+    if (decoded.tokenVersion !== user.security.tokenVersion) {
+      return res.status(401).json({ message: 'Session invalidated. Please login again.' });
+    }
+
     if (user.isSuspended) {
       const allowedSuspendedPaths = [
         '/api/users/appeals',
@@ -61,7 +65,7 @@ const optionalAuth = async (req, res, next) => {
     const decoded = verifyAccessToken(token);
     const user = await User.findById(decoded.userId);
 
-    if (user && !user.isSuspended) {
+    if (user && !user.isSuspended && decoded.tokenVersion === user.security.tokenVersion) {
       req.user = user;
     }
   } catch (error) {
