@@ -89,8 +89,20 @@ const sendMessage = async (req, res) => {
 
     res.status(201).json({ message });
   } catch (error) {
-    console.error('Backend: sendMessage error:', error);
-    res.status(400).json({ message: error.message });
+    console.error(`Security Alert: sendMessage error for user ${req.user?._id}:`, error);
+
+    // Cleanup uploaded files on failure
+    if (req.files && req.files.length > 0) {
+      for (const file of req.files) {
+        if (file.filename) {
+          cloudinary.uploader.destroy(file.filename).catch(err =>
+            console.error('Cleanup failed after error:', err)
+          );
+        }
+      }
+    }
+
+    res.status(500).json({ message: 'Error sending message. Please try again.' });
   }
 };
 
