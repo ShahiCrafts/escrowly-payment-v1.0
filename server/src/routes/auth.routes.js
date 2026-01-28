@@ -2,11 +2,11 @@ const express = require('express');
 const passport = require('passport');
 const router = express.Router();
 const { authController } = require('../controllers');
-const { authenticate, authLimiter, passwordResetLimiter, conditionalCaptcha, validators } = require('../middleware');
+const { authenticate, authLimiter, loginLimiter, passwordResetLimiter, conditionalCaptcha, validators } = require('../middleware');
 
-router.post('/register', authLimiter, validators.registerValidation, authController.register);
+router.post('/register', authLimiter, conditionalCaptcha, validators.registerValidation, authController.register);
 
-router.post('/login', authLimiter, conditionalCaptcha, validators.loginValidation, authController.login);
+router.post('/login', loginLimiter, conditionalCaptcha, validators.loginValidation, authController.login);
 
 router.post('/refresh', authController.refresh);
 
