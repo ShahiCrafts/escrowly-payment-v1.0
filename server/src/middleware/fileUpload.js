@@ -10,7 +10,8 @@ const profileStorage = new CloudinaryStorage({
   params: {
     folder: 'escrowly/profiles',
     allowed_formats: ['jpg', 'jpeg', 'png'],
-    transformation: [{ width: 500, height: 500, crop: 'limit' }]
+    transformation: [{ width: 500, height: 500, crop: 'limit' }],
+    public_id: (req, file) => `avatar-${req.user._id}-${Date.now()}`
   }
 });
 
@@ -18,7 +19,12 @@ const attachmentStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'escrowly/attachments',
-    resource_type: 'auto'
+    resource_type: 'auto',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'],
+    public_id: (req, file) => {
+      const fileName = path.parse(file.originalname).name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      return `attach-${req.user._id}-${fileName}-${Date.now()}`;
+    }
   }
 });
 
@@ -37,11 +43,13 @@ const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error('Invalid file type'), false);
+    console.warn(`Security Alert: Blocked upload with invalid MIME type: ${file.mimetype} from user: ${req.user?._id}`);
+    return cb(new Error('Invalid file type. Only images, PDFs, and Word documents are allowed.'), false);
   }
 
   if (!allowedExtensions.includes(ext)) {
-    return cb(new Error('Invalid file extension'), false);
+    console.warn(`Security Alert: Blocked upload with invalid extension: ${ext} from user: ${req.user?._id}`);
+    return cb(new Error('Invalid file extension.'), false);
   }
 
   cb(null, true);
@@ -51,7 +59,7 @@ const uploadSingle = multer({
   storage: profileStorage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024
+    fileSize: 2 * 1024 * 1024 // Reduced to 2MB for avatars
   }
 }).single('file');
 
