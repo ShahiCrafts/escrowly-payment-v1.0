@@ -25,3 +25,7 @@
         box-shadow: none !important;
     }
 }
+
+.grecaptcha-badge {
+    visibility: hidden;
+}
