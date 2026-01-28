@@ -56,7 +56,7 @@ const MFAVerify = () => {
                         </div>
                         <h2 className="text-xl font-semibold text-slate-900 tracking-tight">Two-Step Verification</h2>
                         <p className="text-slate-500 mt-2 text-[15px] leading-relaxed">
-                            Enter the 6-digit code from your authenticator app to sign in.
+                            Enter the 6-digit code from your authenticator app or an 8-character backup code.
                         </p>
                     </div>
 
@@ -65,14 +65,12 @@ const MFAVerify = () => {
                         <div>
                             <input
                                 type="text"
-                                inputMode="numeric"
-                                pattern="[0-9]*"
-                                maxLength={6}
+                                maxLength={8}
                                 value={token}
-                                onChange={(e) => setToken(e.target.value.replace(/\D/g, ''))}
-                                placeholder="000000"
+                                onChange={(e) => setToken(e.target.value.replace(/[^0-9A-Fa-f]/g, '').toUpperCase())}
+                                placeholder="Enter code"
                                 autoFocus
-                                className="w-full h-14 bg-slate-50 border border-slate-200 rounded-xl text-2xl text-center tracking-[0.5em] font-mono font-medium text-slate-900 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                                className="w-full h-14 bg-slate-50 border border-slate-200 rounded-xl text-2xl text-center tracking-[0.3em] font-mono font-medium text-slate-900 placeholder:text-slate-300 placeholder:text-base placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
                             />
                         </div>
 
@@ -80,7 +78,7 @@ const MFAVerify = () => {
                             <Button
                                 type="submit"
                                 isLoading={isLoading}
-                                disabled={token.length < 6}
+                                disabled={token.length !== 6 && token.length !== 8}
                                 className="w-full h-12 text-[15px] font-medium"
                                 size="lg"
                             >
