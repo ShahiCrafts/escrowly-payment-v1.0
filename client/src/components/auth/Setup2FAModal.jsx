@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/common';
 import { toast } from 'react-toastify';
-import { LuScanLine, LuKey, LuX, LuShieldCheck, LuCopy, LuCheck } from "react-icons/lu";
+import { LuScanLine, LuX, LuShieldCheck, LuCopy, LuKeyboard, LuDownload, LuRefreshCw } from "react-icons/lu";
 
 const Setup2FAModal = () => {
     const { setupMFA, enableMFA, logout, show2FASetupModal, setShow2FASetupModal } = useAuth();
@@ -13,8 +13,8 @@ const Setup2FAModal = () => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [backupCodes, setBackupCodes] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [copied, setCopied] = useState(false);
 
-    // Refs for input focus management
     const inputRefs = useRef([]);
 
     useEffect(() => {
@@ -35,13 +35,12 @@ const Setup2FAModal = () => {
     };
 
     const handleOtpChange = (index, value) => {
-        if (value.length > 1) return; // Prevent multiple chars
+        if (!/^\d?$/.test(value)) return;
 
         const newOtp = [...otp];
         newOtp[index] = value;
         setOtp(newOtp);
 
-        // Auto focus next input
         if (value && index < 5) {
             inputRefs.current[index + 1].focus();
         }
@@ -62,7 +61,6 @@ const Setup2FAModal = () => {
                 if (i < 6) newOtp[i] = char;
             });
             setOtp(newOtp);
-            // Focus the box after the pasted content
             const focusIndex = Math.min(pastedData.length, 5);
             inputRefs.current[focusIndex].focus();
         }
@@ -103,102 +101,118 @@ const Setup2FAModal = () => {
 
     const copyToClipboard = (text) => {
         navigator.clipboard.writeText(text);
+        setCopied(true);
         toast.success('Copied to clipboard');
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const downloadCodes = () => {
+        const text = `Escrowly Backup Codes\n${'='.repeat(25)}\n\n${backupCodes.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nKeep these codes safe. Each code can only be used once.`;
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'escrowly-backup-codes.txt';
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success('Backup codes downloaded');
     };
 
     if (!show2FASetupModal) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-            <div className="w-full max-w-lg bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-100 ring-1 ring-slate-900/5 animate-in fade-in zoom-in duration-200">
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
                 {/* Header */}
-                <div className="px-8 py-6 border-b border-slate-50 flex items-center justify-between">
-                    <div>
-                        <h1 className="text-xl font-bold text-slate-900">
-                            {step === 'verify' ? 'Setup Authenticator' : 'Save Backup Codes'}
-                        </h1>
-                        <p className="text-sm text-slate-500 mt-1">Make your account more secure</p>
-                    </div>
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+                    <h1 className="text-base font-semibold text-slate-900">
+                        {step === 'verify' ? 'Setup authenticator app' : 'Save backup codes'}
+                    </h1>
                     <button
                         onClick={handleLogout}
-                        className="text-slate-400 hover:text-slate-600 transition-colors p-2 rounded-full hover:bg-slate-50"
+                        className="p-2 -mr-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
                         title="Cancel & Logout"
                     >
                         <LuX className="w-5 h-5" />
                     </button>
                 </div>
 
-                <div className="p-8">
+                <div className="p-6">
                     {step === 'verify' && (
-                        <div className="space-y-8">
+                        <div className="space-y-6">
                             {/* QR Section */}
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-900 font-semibold">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                                        <LuScanLine className="w-5 h-5" />
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <LuScanLine className="w-4 h-4" />
                                     </div>
-                                    <h3>Scan QR Code</h3>
+                                    <h3 className="text-sm font-semibold text-slate-900">Scan QR code</h3>
                                 </div>
                                 <p className="text-sm text-slate-500 leading-relaxed">
-                                    Open your authenticator app (like Google Authenticator) and scan the code below.
+                                    Scan the QR code below or manually enter the secret key into your authenticator app.
                                 </p>
 
-                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex flex-col sm:flex-row gap-6 items-center">
-                                    <div className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm flex-shrink-0">
+                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex gap-5 items-center">
+                                    <div className="bg-white p-1.5 rounded-lg border border-slate-200 flex-shrink-0">
                                         {qrCode ? (
-                                            <img src={qrCode} alt="QR Code" className="w-32 h-32" />
+                                            <img src={qrCode} alt="QR Code" className="w-28 h-28" />
                                         ) : (
-                                            <div className="w-32 h-32 bg-slate-100 animate-pulse rounded" />
+                                            <div className="w-28 h-28 bg-slate-100 animate-pulse rounded" />
                                         )}
                                     </div>
 
-                                    <div className="flex-1 w-full space-y-3">
-                                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Manual Entry Key</p>
-                                        <div className="font-mono text-sm font-medium text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 break-all">
+                                    <div className="flex-1 min-w-0 space-y-2.5">
+                                        <p className="text-xs font-medium text-slate-500">Can't scan? Enter code manually:</p>
+                                        <div className="font-mono text-xs font-medium text-slate-900 bg-white px-3 py-2 rounded-lg border border-slate-200 break-all select-all">
                                             {secret || 'Loading...'}
                                         </div>
                                         <button
                                             onClick={() => copyToClipboard(secret)}
-                                            className="flex items-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md hover:border-slate-300 w-full justify-center sm:w-auto"
+                                            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-slate-900 transition-colors bg-white px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300"
                                         >
                                             <LuCopy className="w-3.5 h-3.5" />
-                                            Copy Key
+                                            Copy code
                                         </button>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* OTP Input Section */}
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-2 text-slate-900 font-semibold">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
-                                        <LuCheck className="w-5 h-5" />
+                            {/* OTP Input */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
+                                        <LuKeyboard className="w-4 h-4" />
                                     </div>
-                                    <h3>Enter 6-Digit Code</h3>
+                                    <h3 className="text-sm font-semibold text-slate-900">Enter verification code</h3>
                                 </div>
+                                <p className="text-sm text-slate-500">
+                                    Enter the 6-digit code on your authenticator app.
+                                </p>
 
-                                <div className="flex justify-between gap-2 sm:gap-3">
+                                <div className="flex gap-2.5">
                                     {otp.map((digit, index) => (
                                         <input
                                             key={index}
                                             ref={(el) => (inputRefs.current[index] = el)}
                                             type="text"
+                                            inputMode="numeric"
                                             maxLength={1}
                                             value={digit}
                                             onChange={(e) => handleOtpChange(index, e.target.value)}
                                             onKeyDown={(e) => handleKeyDown(index, e)}
                                             onPaste={handlePaste}
-                                            className="w-full h-14 text-center text-2xl font-bold bg-white border border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm"
+                                            className="w-full h-12 text-center text-xl font-bold bg-white border-2 border-slate-200 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
                                         />
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-50">
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-2">
                                 <Button
-                                    variant="ghost"
+                                    variant="secondary"
                                     onClick={handleLogout}
-                                    className="text-slate-500 hover:text-slate-900"
+                                    className="flex-1 h-11 rounded-xl font-bold justify-center"
                                 >
                                     Cancel
                                 </Button>
@@ -206,54 +220,65 @@ const Setup2FAModal = () => {
                                     onClick={handleVerify}
                                     disabled={otp.some(d => !d) || loading}
                                     isLoading={loading}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
+                                    className="flex-1 h-11 rounded-xl font-bold justify-center bg-blue-600 hover:bg-blue-700 text-white"
                                 >
-                                    Enable 2FA
+                                    Verify
                                 </Button>
                             </div>
                         </div>
                     )}
 
                     {step === 'backup' && (
-                        <div className="space-y-6">
-                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3">
-                                <div className="mt-1">
-                                    <LuShieldCheck className="w-6 h-6 text-blue-600" />
-                                </div>
-                                <div>
-                                    <h3 className="font-bold text-blue-900">Save your backup codes</h3>
-                                    <p className="text-sm text-blue-800 mt-1">If you lose your device, these codes are the only way to recover your account.</p>
+                        <div className="space-y-5">
+                            <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                                <LuShieldCheck className="w-7 h-7 text-green-500" />
+                            </div>
+
+                            <div className="text-center space-y-1.5">
+                                <h3 className="text-lg font-bold text-slate-900">Save your recovery codes</h3>
+                                <p className="text-sm text-slate-500 leading-relaxed">
+                                    These are your only way to recover your account if you lose your device. Store them somewhere safe.
+                                </p>
+                            </div>
+
+                            <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
+                                <div className="grid grid-cols-2 gap-2.5 font-mono text-sm">
+                                    {backupCodes.map((code, index) => (
+                                        <button
+                                            key={index}
+                                            className="bg-white border border-slate-200 py-2.5 rounded-lg text-center text-slate-900 tracking-wider hover:bg-slate-100 hover:border-slate-300 transition-all cursor-pointer active:scale-95"
+                                            onClick={() => copyToClipboard(code)}
+                                            title="Click to copy"
+                                        >
+                                            {code}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
-                            <div className="bg-slate-900 rounded-xl p-6 font-mono text-white grid grid-cols-2 gap-4 text-center">
-                                {backupCodes.map((code, index) => (
-                                    <button
-                                        key={index}
-                                        className="bg-white/10 py-2.5 rounded-lg select-all hover:bg-white/20 transition-colors cursor-pointer active:scale-95 transform"
-                                        onClick={() => copyToClipboard(code)}
-                                        title="Click to copy"
-                                    >
-                                        {code}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                                <Button
+                            <div className="flex gap-2.5">
+                                <button
                                     onClick={() => copyToClipboard(backupCodes.join('\n'))}
-                                    variant="secondary"
-                                    className="flex-1"
+                                    className="flex-1 inline-flex items-center justify-center gap-2 h-10 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
                                 >
-                                    Copy All Codes
-                                </Button>
-                                <Button
-                                    onClick={handleComplete}
-                                    className="flex-1 bg-blue-600 hover:bg-blue-700 border-transparent text-white"
+                                    <LuCopy className="w-4 h-4" />
+                                    Copy All
+                                </button>
+                                <button
+                                    onClick={downloadCodes}
+                                    className="flex-1 inline-flex items-center justify-center gap-2 h-10 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all"
                                 >
-                                    I've Saved Them
-                                </Button>
+                                    <LuDownload className="w-4 h-4" />
+                                    Download
+                                </button>
                             </div>
+
+                            <Button
+                                onClick={handleComplete}
+                                className="w-full justify-center bg-blue-600 hover:bg-blue-700 text-white h-11 rounded-xl font-bold"
+                            >
+                                I've saved my codes
+                            </Button>
                         </div>
                     )}
                 </div>
